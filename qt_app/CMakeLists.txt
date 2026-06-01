@@ -21,8 +21,17 @@ qt_add_qml_module(SmacircleQt
     QML_FILES Main.qml
 )
 
-# Windows: GUI app (no console window) for release.
+# App / window icon (cross-platform, via Qt resource)
+qt_add_resources(SmacircleQt "appicon"
+    PREFIX "/"
+    FILES icon/icon.png
+)
+
+# Windows: GUI app (no console window) + exe icon (app.rc -> icon/app.ico)
 set_target_properties(SmacircleQt PROPERTIES WIN32_EXECUTABLE ON)
+if(WIN32)
+    target_sources(SmacircleQt PRIVATE app.rc)
+endif()
 
 target_link_libraries(SmacircleQt PRIVATE Qt6::Quick Qt6::Bluetooth)
 
