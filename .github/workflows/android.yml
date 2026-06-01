@@ -32,14 +32,25 @@ jobs:
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y ninja-build
 
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: Qt
+          key: qt-linux-${{ env.QT_VERSION }}-desktop+android-arm64-qtconnectivity
+
       - name: Install Qt (desktop host + Android target)
+        if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
           python3 -m pip install --user aqtinstall
           python3 -m aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 \
             -m qtconnectivity -O "$PWD/Qt"
           python3 -m aqt install-qt linux android "$QT_VERSION" android_arm64_v8a \
             -m qtconnectivity -O "$PWD/Qt"
-          echo "QT_HOST=$PWD/Qt/$QT_VERSION/gcc_64"            >> "$GITHUB_ENV"
+
+      - name: Qt environment
+        run: |
+          echo "QT_HOST=$PWD/Qt/$QT_VERSION/gcc_64"               >> "$GITHUB_ENV"
           echo "QT_ANDROID=$PWD/Qt/$QT_VERSION/android_arm64_v8a" >> "$GITHUB_ENV"
 
       - name: Install Android NDK + platform
