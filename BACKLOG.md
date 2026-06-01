@@ -58,6 +58,11 @@ $99 signing wall; this is build-only validation, not distribution.)
 - **APK slimming** — the release APK is ~47 MB. Strip unused QML modules + Qt translations and
   tighten the deployment to roughly halve it.
 - **README screenshot/GIF** — a shot of the dashboard (author to capture).
+- **Stable signing keystore** — generate a release `.jks` and store it + its credentials as the
+  repo secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+  `ANDROID_KEY_PASSWORD`) so APK updates install in place instead of needing a reinstall. Do it
+  before the next release so it's the last build signed with an ephemeral key. (Walk-through on
+  request.)
 
 ## Open questions (verify on hardware)
 
