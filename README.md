@@ -60,7 +60,7 @@ no embedded engineering — a thin Bluetooth shim drowning in third-party Chines
 MobTech). This is the work of **Klappradfahrer** (German: "folding-bike riders" — weekend dabblers,
 not engineers), a crew of **kutyaütő balfaszok** (Hungarian, roughly: bungling good-for-nothing
 clowns) who wired SDKs together, called it a product, and walked off — leaving paying owners with
-bricks, including brand-new units never opened.
+bricks: instant e-waste, including brand-new units never opened.
 
 *(Opinions here are the author's; the facts are above, straight from the app's bytecode.)*
 
@@ -91,6 +91,7 @@ python -m venv venv
 .\venv\Scripts\python.exe ride.py scan                  # find the scooter
 .\venv\Scripts\python.exe ride.py ride --address <ADDR> # connect + control
 ```
+Minimal unlock-only example: [`ble_client/examples/unlock.py`](ble_client/examples/unlock.py).
 
 **Qt app** — build it (Windows desktop; needs Qt 6.10 MSVC + the Qt Bluetooth module):
 ```bat
