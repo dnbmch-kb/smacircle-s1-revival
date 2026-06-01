@@ -49,6 +49,46 @@ Current scan = match on name contains `SMACIRCLE` **or** advertises service
 - **Verdict:** fine for *our* scooter now; picker + remembered-device + C041
   fallback needed for "works with any Smacircle."
 
+### 3. 🔵 Surface read-only device info (firmware + serial)  *(qt_app + script)*
+Three M0 query commands + their reply parsers exist but we never use them:
+- `checkControlVersion()` → type-1 reply; controller FW = decoded bytes 6,7
+  (e.g. `8077`).
+- `checkBleVersion()` → BLE-module FW (e.g. `0487`).
+- `getCardSN()` → `parserBike`: payload bytes 6..end-2 are an ASCII serial
+  (matches the advertised `SMACIRCLExxxxx` name).
+- **Plan:** query once on connect; show in an Info/About panel (Qt) and add
+  `ver` / `sn` REPL commands (Python). Needs small parser additions in
+  `protocol.h` / `protocol.py`. Safe, read-only.
+
+### 4. 🟡 Real handshake confirmation + password entry  *(qt_app + script)*
+`parserInfo` emits `Hand_Success` / `Hand_Fail` from a short status frame
+(byte5==00; byte2==03 → fail). Today both clients just wait ~800 ms and assume
+success. Detect the real result → show "wrong password" and offer a password
+field, so units whose password was changed off `0000` work too.
+
+### 5. ⚠️ Reset-mileage: fix label + add confirm  *(qt_app, + add to script)*
+The Qt "Reset trip" button actually sends `clearAllMileage` (`0xF5 'C' 'L'`),
+which most likely clears the **total odometer**, not the trip. Verify on
+hardware, relabel ("Reset mileage"), add a confirmation dialog (irreversible).
+Not present in the Python script at all yet.
+
+### 6. 🔵 Password change (advanced)  *(qt_app settings)*
+`buildPasswordChange` exists. Could expose in a settings screen with strong
+warnings. Recovery if forgotten = hold throttle+brake while powering on → resets
+to `0000`.
+
+### 7. ❄️ Firmware OTA — PARKED (dangerous)
+`updateStep1-5` implement a controller (`SD_DK`) + board (`SD_BP`) flash; both
+`.binLB` blobs are in the APK assets (`work/src_*/resources/assets/`). Fully
+reproducible from our client, but HIGH brick risk and no recovery story.
+Power-user tool only — never in the end-user app.
+
+### 8. 🔵 Quality-of-life
+- Qt: keep-screen-on while connected, auto-reconnect to last device, low-battery
+  toast, larger touch targets for mobile.
+- Script: one-shot `ride.py unlock --address X` (connect→unlock→exit), telemetry
+  CSV logging.
+
 ---
 
 ## Known future work (context)
