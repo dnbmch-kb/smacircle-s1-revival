@@ -5,7 +5,10 @@ a Python BLE client and a Qt 6 desktop/mobile app that let you actually *use* a
 device the manufacturer abandoned.
 
 > **Status:** working. The S1 connects, unlocks, streams live telemetry, and rides —
-> with **no account, no server, no "activation."** Roadmap in [BACKLOG.md](BACKLOG.md).
+> with **no account, no server, no "activation."** Prebuilt **Android APK** and portable
+> **Windows** build are on the
+> [Releases](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page.
+> Roadmap in [BACKLOG.md](BACKLOG.md).
 
 ---
 
@@ -122,21 +125,31 @@ and shepherding App Store software is simply not the point of this project. The 
 codebase is cross-platform and *ready* for iOS, so if someone with an Apple account wants
 to carry that build, the door is open. Otherwise: Android.
 
-## Building the Android APK
+## Download & install
 
-CI builds it — no local Android toolchain required.
+Grab the latest build from the
+[**Releases**](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page:
 
-- **Push a tag** `vX.Y.Z` → GitHub Actions ([`.github/workflows/android.yml`](.github/workflows/android.yml))
-  builds a signed `arm64-v8a` APK and attaches it to the matching **Release**.
-- Any push to `main` (or a manual run) uploads the APK as a build **artifact**.
+- **Android** — `SmacircleS1.apk`. Requires **Android 9.0+** (Qt 6.10's floor). Allow "install
+  unknown apps", tap to install; first launch asks for the Bluetooth permission.
+- **Windows** — `SmacircleS1-windows-x64.zip`. Unzip, run `SmacircleQt.exe` (portable — the Qt
+  runtime is bundled).
 
-Install on the phone: download the APK, allow "install unknown apps", tap it. Requires
-**Android 9.0+** (Qt 6.10's floor). First launch asks for the Bluetooth permission.
+## Continuous integration
 
-**Signing.** With no setup, CI signs with an ephemeral key (installs fine, but updating later
-needs the old app uninstalled first). For stable updates, add these repo secrets and CI uses
-them instead: `ANDROID_KEYSTORE_BASE64` (base64 of your `.jks`), `ANDROID_KEYSTORE_PASSWORD`,
-`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+Two GitHub Actions pipelines produce the release builds — no local toolchain required:
+
+| Workflow | Triggers | Output |
+|----------|----------|--------|
+| [`android.yml`](.github/workflows/android.yml) | push `main`, `v*` tag, manual | `arm64-v8a` APK — artifact on push, Release asset on tag |
+| [`windows.yml`](.github/workflows/windows.yml) | `v*` tag, manual | `windeployqt` portable zip — Release asset on tag |
+
+Push a tag `vX.Y.Z` to cut a Release carrying both builds.
+
+**Android signing.** With no setup, CI signs the APK with an ephemeral key (installs fine, but a
+later update needs the old app uninstalled first). For stable in-place updates, add these repo
+secrets and CI uses them instead: `ANDROID_KEYSTORE_BASE64` (base64 of your `.jks`),
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 
 ## Disclaimer
 
