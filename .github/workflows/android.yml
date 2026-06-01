@@ -1,0 +1,103 @@
+name: Android
+
+# Build the Android APK. On a v* tag, attach it to a GitHub Release.
+# Every push to main / manual run also uploads the APK as a workflow artifact.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write          # needed to create the GitHub Release
+
+env:
+  QT_VERSION: 6.10.1
+  NDK_VERSION: 26.1.10909125   # adjust if Qt 6.10 warns about a different NDK
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Install Qt (desktop host + Android target)
+        run: |
+          python3 -m pip install --user aqtinstall
+          python3 -m aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 \
+            -m qtconnectivity -O "$PWD/Qt"
+          python3 -m aqt install-qt linux android "$QT_VERSION" android_arm64_v8a \
+            -m qtconnectivity -O "$PWD/Qt"
+          echo "QT_HOST=$PWD/Qt/$QT_VERSION/gcc_64"            >> "$GITHUB_ENV"
+          echo "QT_ANDROID=$PWD/Qt/$QT_VERSION/android_arm64_v8a" >> "$GITHUB_ENV"
+
+      - name: Install Android NDK + platform
+        run: |
+          SDKM="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --install "ndk;$NDK_VERSION" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: |
+          "$QT_ANDROID/bin/qt-cmake" -S qt_app -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DQT_HOST_PATH="$QT_HOST" \
+            -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
+            -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
+            -DQT_ANDROID_ABIS=arm64-v8a
+
+      - name: Build APK
+        run: cmake --build build --target apk
+
+      - name: Sign APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS:      ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS:    ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS:     ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          APK=$(find build -path '*outputs/apk/release/*-release-unsigned.apk' | head -1)
+          [ -z "$APK" ] && APK=$(find build -name '*-release*.apk' | head -1)
+          [ -z "$APK" ] && APK=$(find build -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then echo "::error::No APK produced"; find build -name '*.apk'; exit 1; fi
+          echo "Found unsigned APK: $APK"
+          BT=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "Signing with the project keystore from secrets."
+            echo "$KEYSTORE_B64" | base64 -d > release.jks
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret set — signing with an EPHEMERAL key."
+            echo "::warning::Updates will require uninstalling the old app first. Add a keystore secret for stable updates."
+            keytool -genkeypair -keystore release.jks -alias key -keyalg RSA -keysize 2048 \
+              -validity 10000 -storepass smacircle -keypass smacircle -dname "CN=Smacircle S1 freed"
+            KS_PASS=smacircle; KEY_ALIAS=key; KEY_PASS=smacircle
+          fi
+          "$BT/zipalign" -p -f 4 "$APK" aligned.apk
+          "$BT/apksigner" sign --ks release.jks --ks-pass "pass:$KS_PASS" \
+            --key-pass "pass:$KEY_PASS" --ks-key-alias "$KEY_ALIAS" \
+            --out SmacircleS1.apk aligned.apk
+          "$BT/apksigner" verify --verbose SmacircleS1.apk
+          rm -f release.jks aligned.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmacircleS1-apk
+          path: SmacircleS1.apk
+
+      - name: Attach APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SmacircleS1.apk
+          generate_release_notes: true

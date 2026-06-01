@@ -93,10 +93,12 @@ Power-user tool only — never in the end-user app.
 
 ## Known future work (context)
 
-- 🟡 **Android build** — install Android SDK/NDK/JDK (via Qt Creator), generate
-  templates, add BLE permissions to `AndroidManifest.xml`, build APK, sideload to
-  mother's (Android 9+) phone. Runtime `QBluetoothPermission` request already in
-  code. iOS dropped (signing wall; using an Android phone instead).
+- 🟢 **Android build + CI** — `qt_app/android/AndroidManifest.xml` (BLE perms),
+  CMake Android props, and `.github/workflows/android.yml` (tag `v*` → signed APK on
+  a GitHub Release; pushes → artifact) are in place. Runtime `QBluetoothPermission`
+  request in code. First CI run validates the Qt/NDK versions, the `apk` target, and
+  the manifest. For local builds: install SDK/NDK/JDK via Qt Creator. iOS dropped
+  (signing wall; using an Android phone instead).
 - 🔵 **C041 protocol in Qt app** — already in Python `protocol.py`; would unlock
   item 2b.
 - 🔵 **Re-lock options** — disconnect currently leaves the scooter as-is (by

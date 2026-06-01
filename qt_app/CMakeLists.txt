@@ -25,3 +25,14 @@ qt_add_qml_module(SmacircleQt
 set_target_properties(SmacircleQt PROPERTIES WIN32_EXECUTABLE ON)
 
 target_link_libraries(SmacircleQt PRIVATE Qt6::Quick Qt6::Bluetooth)
+
+# --- Android packaging (no effect on desktop builds) ---
+if(ANDROID)
+    set_target_properties(SmacircleQt PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android"
+        QT_ANDROID_TARGET_SDK_VERSION 34
+        QT_ANDROID_MIN_SDK_VERSION    28   # Qt 6.10 floor = Android 9.0
+        QT_ANDROID_VERSION_NAME       "1.0"
+        QT_ANDROID_VERSION_CODE       1
+    )
+endif()

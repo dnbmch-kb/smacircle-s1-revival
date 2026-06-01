@@ -122,6 +122,22 @@ and shepherding App Store software is simply not the point of this project. The 
 codebase is cross-platform and *ready* for iOS, so if someone with an Apple account wants
 to carry that build, the door is open. Otherwise: Android.
 
+## Building the Android APK
+
+CI builds it — no local Android toolchain required.
+
+- **Push a tag** `vX.Y.Z` → GitHub Actions ([`.github/workflows/android.yml`](.github/workflows/android.yml))
+  builds a signed `arm64-v8a` APK and attaches it to the matching **Release**.
+- Any push to `main` (or a manual run) uploads the APK as a build **artifact**.
+
+Install on the phone: download the APK, allow "install unknown apps", tap it. Requires
+**Android 9.0+** (Qt 6.10's floor). First launch asks for the Bluetooth permission.
+
+**Signing.** With no setup, CI signs with an ephemeral key (installs fine, but updating later
+needs the old app uninstalled first). For stable updates, add these repo secrets and CI uses
+them instead: `ANDROID_KEYSTORE_BASE64` (base64 of your `.jks`), `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+
 ## Disclaimer
 
 Personal **interoperability** project for hardware **I own**. No vendor code is
