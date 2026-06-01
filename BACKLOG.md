@@ -54,6 +54,11 @@ $99 signing wall; this is build-only validation, not distribution.)
   larger touch targets for mobile.
 - Script: one-shot `ride.py unlock --address X` (connect→unlock→exit), telemetry CSV logging.
 
+### Release polish
+- **APK slimming** — the release APK is ~47 MB. Strip unused QML modules + Qt translations and
+  tighten the deployment to roughly halve it.
+- **README screenshot/GIF** — a shot of the dashboard (author to capture).
+
 ## Open questions (verify on hardware)
 
 - Does `clearAllMileage` reset the **total** odometer or the **trip**? (button is labeled

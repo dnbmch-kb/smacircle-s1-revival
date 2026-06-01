@@ -55,23 +55,14 @@ is account plumbing, third-party data SDKs, and "activation" ceremony.
 
 ## Editorial
 
-None of this should have been necessary. A company sold a *physical* product that depends on its
-servers, then took the servers **and** the apps away and walked off — leaving paying owners holding
-bricks, including brand-new units never opened. That's the part worth being angry about.
+The "activation" that justified all this was always theatre. Read the decompiled app and you find
+no embedded engineering — a thin Bluetooth shim drowning in third-party Chinese SDKs (Alibaba,
+MobTech). This is the work of **Klappradfahrer** (German: "folding-bike riders" — weekend dabblers,
+not engineers), a crew of **kutyaütő balfaszok** (Hungarian, roughly: bungling good-for-nothing
+clowns) who wired SDKs together, called it a product, and walked off — leaving paying owners with
+bricks, including brand-new units never opened.
 
-The "activation" that justified it is theatre: the hardware never needed it, the lock yields to a
-plain BLE write, and the server's only real job was writing your name next to a serial number —
-bookkeeping dressed up as security.
-
-Read the decompiled app and you find no embedded engineering — just a thin Bluetooth shim bolted
-onto a stack of third-party Chinese SDKs (Alibaba, MobTech) and a heap of "activation" bloat. This
-is the work of **Klappradfahrer** (German: "folding-bike riders" — weekend dabblers, not engineers),
-a crew of **kutyaütő balfaszok** (Hungarian, roughly: bungling good-for-nothing clowns) who wired
-SDKs together and called it a product. The scooter protocol is trivial; the effort went everywhere
-*except* building something that outlives its vendor.
-
-*(Opinions here are the author's; the technical claims above come straight from the app's own
-bytecode and from testing on real hardware.)*
+*(Opinions here are the author's; the facts are above, straight from the app's bytecode.)*
 
 ## Repository layout
 
@@ -90,17 +81,18 @@ From the [**Releases**](https://github.com/dnbmch-kb/smacircle-s1-revival/releas
   install; first launch asks for the Bluetooth permission.
 - **Windows** — `SmacircleS1-windows-x64.zip`. Unzip, run `SmacircleQt.exe` (portable).
 
-## Build from source
+## Run / build from source
 
-**Python client:**
+**Python client** — the protocol reference; no build step, just run it (`bleak`):
 ```powershell
 cd ble_client
-python -m venv venv; .\venv\Scripts\pip install bleak
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install bleak
 .\venv\Scripts\python.exe ride.py scan                  # find the scooter
 .\venv\Scripts\python.exe ride.py ride --address <ADDR> # connect + control
 ```
 
-**Qt app (Windows desktop)** — needs Qt 6.10 (MSVC) + Qt Bluetooth:
+**Qt app** — build it (Windows desktop; needs Qt 6.10 MSVC + the Qt Bluetooth module):
 ```bat
 cd qt_app
 build.bat   :: configure + build (Release)
@@ -126,6 +118,11 @@ Desktop and Android are covered. **iOS isn't** — Apple requires a paid Develop
 (~US$100/yr) before an app runs on a real iPhone, with no free permanent sideload. And the author
 is an **embedded developer, not an iOS app studio**. The Qt/QML is cross-platform and *ready* for
 iOS, so the door's open if someone with an Apple account wants to carry that build.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Covers this project's own code; it grants no rights to the
+manufacturer's software, which is not included here (see Disclaimer).
 
 ## Disclaimer
 
