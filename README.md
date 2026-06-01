@@ -109,6 +109,19 @@ deploy.bat       :: bundle the Qt runtime (first time only)
 run.bat          :: launch
 ```
 
+## Platforms
+
+The app runs on the desktop today. Which mobile platform it ships to is still open —
+but **Android is the likely target**: APKs install freely, never expire, and cost
+nothing to put on a phone.
+
+**iOS is unlikely.** Apple requires a paid Developer Program membership (~US$100/year)
+before an app may run on a real iPhone, and there is no free, permanent sideload path.
+Beyond the cost: the author is an **embedded developer**, not an iOS app studio — writing
+and shepherding App Store software is simply not the point of this project. The Qt/QML
+codebase is cross-platform and *ready* for iOS, so if someone with an Apple account wants
+to carry that build, the door is open. Otherwise: Android.
+
 ## Disclaimer
 
 Personal **interoperability** project for hardware **I own**. No vendor code is
