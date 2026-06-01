@@ -71,8 +71,12 @@ security.
 
 Read the decompiled app and you don't find embedded engineering. You find a thin
 Bluetooth shim bolted onto a stack of third-party Chinese SDKs (Alibaba Cloud, MobTech)
-plus a heap of account/"activation" bloat. The actual scooter protocol is trivial; the
-effort went everywhere *except* shipping a product that outlives its vendor.
+plus a heap of account/"activation" bloat. This is not the work of embedded developers —
+it's the work of **Klappradfahrer** (German: "folding-bike riders" — weekend dabblers,
+not engineers), a crew of **kutyaütő balfaszok** (Hungarian, roughly: bungling
+good-for-nothing clowns) who wired SDKs together and called it a product. The actual
+scooter protocol is trivial; the effort went everywhere *except* shipping something that
+outlives its vendor.
 
 *(Opinions in this section are the author's. The technical claims above come straight
 from the app's own bytecode and from testing on real hardware.)*
