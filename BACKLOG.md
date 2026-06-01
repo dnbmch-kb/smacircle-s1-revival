@@ -1,121 +1,97 @@
 # Smacircle — Backlog
 
-Running list of ideas / improvements for the offline BLE client (`ble_client/`,
-Python) and the Qt app (`qt_app/`, C++/QML). Discussion notes, not commitments.
+Ideas and open work for the offline BLE client (`ble_client/`, Python) and the Qt app
+(`qt_app/`, C++/QML). Discussion notes, not commitments.
 
-Status key: 🔵 idea · 🟡 planned · 🟢 in progress · ✅ done · ❄️ parked
-
----
+Status key: 🔵 idea · 🟡 planned · ⚠️ needs care · ❄️ parked
 
 ## Open
 
-### 1. 🔵 Unified connect / disconnect button  *(qt_app)*
-Merge the top "Scan & Connect" button and the bottom "Disconnect" button into a
-single button whose label + action follow the connection state.
+### Unified connect / disconnect button  *(qt_app)*
+Merge the top "Scan & Connect" and bottom "Disconnect" into one button whose label +
+action follow the connection state.
 
-- **Why:** less clutter, clearer single point of control.
-- **Catch — must stay honest (cf. the `hasData` fix):** connection is really 4
-  states, but `BleController` only exposes `scanning` + `connected` today. There
-  is a gap during *connecting* (both false) where a naive toggle would flash back
-  to "Scan & Connect" mid-connect.
-- **Proposed states:**
-  - Idle → "Scan & Connect" → `startScan()`
-  - Scanning → "Scanning…" (ideally tap-to-cancel via `m_agent->stop()`)
-  - Connecting → "Connecting…" (disabled)
-  - Connected → "Disconnect" → `disconnectScooter()`
-- **Work:** add a small state enum/Q_PROPERTY to `BleController` (backend change,
-  not just QML). Low effort.
+- **Why:** less clutter, one control.
+- **Catch — stay honest (cf. the `hasData` rule):** connection is really 4 states, but
+  `BleController` only exposes `scanning` + `connected`. There's a gap during *connecting*
+  (both false) where a naive toggle would flash back to "Scan & Connect".
+- **States:** Idle → "Scan & Connect"; Scanning → "Scanning…" (tap-to-cancel);
+  Connecting → "Connecting…"; Connected → "Disconnect".
+- **Work:** add a small state enum/property to `BleController` (backend change, not just QML).
 
-### 2. 🔵 Multiple devices + non-M0 GATT robustness  *(qt_app, + protocol)*
-Current scan = match on name contains `SMACIRCLE` **or** advertises service
-`6e400001`, then **auto-connect to the first match** and stop scanning.
+### Multiple devices + non-M0 GATT robustness  *(qt_app + protocol)*
+Scan currently matches name `SMACIRCLE` **or** service `6e400001`, then auto-connects to the
+first match and stops.
 
-- **2a. Multiple Smacircles in range:** picks whichever is seen first
-  (non-deterministic) → could bind the wrong unit. No picker, no "remember mine."
-  - Fix options: (a) device-list picker (like Qt's heart-rate `DeviceFinder`);
-    (b) remember chosen address (e.g. `SMACIRCLE09829`) in `QSettings` and
-    auto-reconnect only to that one.
-- **2b. Different GATT / protocol:** the Qt app is **M0-only**.
-  - If a unit uses another protocol (e.g. **C041**, already ported in Python
-    `protocol.py` but not in the Qt app) but still advertises "SMACIRCLE", we
-    connect then `createServiceObject(6e400001)` → null → graceful
-    "Nordic UART service not found!" but no function.
-  - If it advertises neither the name nor `6e400001`, we won't find it at all.
-  - Fix: at service discovery, detect which known service is present (NUS/M0 vs
-    C041) and select the matching protocol → C++ port of the existing C041 path.
-- **Note:** our S1 *does* advertise `6e400001`, so it works today; don't assume
-  all units advertise their service UUID — the connect-time service check is the
+- **Multiple S1s in range:** picks whichever is seen first → could bind the wrong one. Fix:
+  device-list picker (like Qt's heart-rate `DeviceFinder`) and/or remember the chosen address
+  in `QSettings` and reconnect only to that one.
+- **Different GATT / protocol:** the Qt app is **M0-only**. A C041 unit (ported in Python
+  `protocol.py`, not in Qt) would connect but fail gracefully ("Nordic UART service not
+  found!"). Fix: detect the present service at discovery and pick the matching protocol — a
+  C++ port of the C041 path.
+- Our S1 *does* advertise `6e400001`, so it works today; the connect-time service check is the
   reliable gate.
-- **Verdict:** fine for *our* scooter now; picker + remembered-device + C041
-  fallback needed for "works with any Smacircle."
 
-### 3. 🔵 Surface read-only device info (firmware + serial)  *(qt_app + script)*
-Three M0 query commands + their reply parsers exist but we never use them:
-- `checkControlVersion()` → type-1 reply; controller FW = decoded bytes 6,7
-  (e.g. `8077`).
-- `checkBleVersion()` → BLE-module FW (e.g. `0487`).
-- `getCardSN()` → `parserBike`: payload bytes 6..end-2 are an ASCII serial
-  (matches the advertised `SMACIRCLExxxxx` name).
-- **Plan:** query once on connect; show in an Info/About panel (Qt) and add
-  `ver` / `sn` REPL commands (Python). Needs small parser additions in
-  `protocol.h` / `protocol.py`. Safe, read-only.
+### App icon  *(qt_app)*
+Ships with the default system launcher icon (the manifest deliberately omits a custom one).
+Add a real icon: Android adaptive launcher (`res/mipmap-*`) + a desktop window/taskbar icon.
+Provide one source SVG/PNG and generate the densities.
 
-### 4. 🟡 Real handshake confirmation + password entry  *(qt_app + script)*
-`parserInfo` emits `Hand_Success` / `Hand_Fail` from a short status frame
-(byte5==00; byte2==03 → fail). Today both clients just wait ~800 ms and assume
-success. Detect the real result → show "wrong password" and offer a password
-field, so units whose password was changed off `0000` work too.
+### Error toasts / transient messages  *(qt_app)*
+Surface BLE errors and command outcomes (scan error, link lost, write failed, wrong password,
+"mileage reset sent") as transient toasts/snackbars, not only the one-line status label.
+A small QML snackbar component driven by a `notify(text)` signal on `BleController`.
 
-### 5. ⚠️ Reset-mileage: fix label + add confirm  *(qt_app, + add to script)*
-The Qt "Reset trip" button actually sends `clearAllMileage` (`0xF5 'C' 'L'`),
-which most likely clears the **total odometer**, not the trip. Verify on
-hardware, relabel ("Reset mileage"), add a confirmation dialog (irreversible).
-Not present in the Python script at all yet.
+### iOS CI pipeline (simulator build)  *(ci)*
+Add `.github/workflows/ios.yml`: build for the **iOS simulator** on a macOS runner (free on a
+public repo; proves the iOS build compiles). Device / TestFlight signing steps gated behind
+Apple Developer secrets — dormant until an account exists. (See README → Platforms for the
+$99 signing wall; this is build-only validation, not distribution.)
 
-### 6. 🔵 Password change (advanced)  *(qt_app settings)*
-`buildPasswordChange` exists. Could expose in a settings screen with strong
-warnings. Recovery if forgotten = hold throttle+brake while powering on → resets
-to `0000`.
+### Quality-of-life
+- Qt: keep-screen-on while connected, auto-reconnect to last device, low-battery toast,
+  larger touch targets for mobile.
+- Script: one-shot `ride.py unlock --address X` (connect→unlock→exit), telemetry CSV logging.
 
-### 7. ❄️ Firmware OTA — PARKED (dangerous)
-`updateStep1-5` implement a controller (`SD_DK`) + board (`SD_BP`) flash; both
-`.binLB` blobs are in the APK assets (`work/src_*/resources/assets/`). Fully
-reproducible from our client, but HIGH brick risk and no recovery story.
-Power-user tool only — never in the end-user app.
+## Open questions (verify on hardware)
 
-### 8. 🔵 Quality-of-life
-- Qt: keep-screen-on while connected, auto-reconnect to last device, low-battery
-  toast, larger touch targets for mobile.
-- Script: one-shot `ride.py unlock --address X` (connect→unlock→exit), telemetry
-  CSV logging.
+- Does `clearAllMileage` reset the **total** odometer or the **trip**? (button is labeled
+  "Reset mileage" + confirm dialog until confirmed.)
+- Do **Serial / Controller FW / Bluetooth FW** populate on a real connect? The reply-frame
+  routing (type 1, `ex==0x10` for serial, addr for control vs BLE) is inferred; the Python
+  `ver` / `sn` commands dump raw bytes if it needs adjusting. (Serial decoded as `09829` in a
+  synthetic test — matches the `SMACIRCLE09829` advertised name, a good sign.)
 
----
+## Parked
 
-## Known future work (context)
+### Firmware OTA — dangerous
+`updateStep1-5` flash the controller (`SD_DK`) + board (`SD_BP`); both `.binLB` blobs are in
+the APK assets. Fully reproducible but HIGH brick risk, no recovery story. Power-user tool
+only — never in the end-user app.
 
-- 🟢 **Android build + CI** — `qt_app/android/AndroidManifest.xml` (BLE perms),
-  CMake Android props, and `.github/workflows/android.yml` (tag `v*` → signed APK on
-  a GitHub Release; pushes → artifact) are in place. Runtime `QBluetoothPermission`
-  request in code. First CI run validates the Qt/NDK versions, the `apk` target, and
-  the manifest. For local builds: install SDK/NDK/JDK via Qt Creator. iOS dropped
-  (signing wall; using an Android phone instead).
-- 🔵 **C041 protocol in Qt app** — already in Python `protocol.py`; would unlock
-  item 2b.
-- 🔵 **Re-lock options** — disconnect currently leaves the scooter as-is (by
-  request). Could add an optional "lock on disconnect" preference later.
-- 🔵 **Firmware / serial display** — `checkControlVersion` / `checkBleVersion` /
-  `getCardSN` commands exist; not surfaced in the UI.
+### Password change  *(qt_app)*
+`buildPasswordChange` exists. Recovery if forgotten = hold throttle+brake at power-on → resets
+to `0000`. Parked by decision; low value, easy to lock yourself out.
 
----
+## Known future work
+
+- C041 protocol support in the Qt app (already in Python `protocol.py`) — unlocks the non-M0
+  device path above.
+- Optional "lock on disconnect" preference (disconnect currently leaves the scooter as-is, by
+  request).
 
 ## Done
 
-- ✅ Reverse-engineered M0 protocol; proven on hardware (handshake → unlock →
-  ride). No server/account/activation needed.
-- ✅ Python client (`ble_client/`): scan, handshake, unlock, gear/light/cruise,
-  live telemetry.
-- ✅ Qt desktop app: battery/speed hero tiles, status (lock/mode/light/cruise/
-  trip/total/fault), controls (unlock/lock, NORMAL↔SPORT, light, cruise, reset
-  trip, connect, disconnect-without-lock).
-- ✅ Honest UI — all readouts show "—" until live telemetry arrives (`hasData`).
-- ✅ Diagnosed "won't go" as non-zero-start (kick-to-start), not a lock.
+- Reverse-engineered the M0 protocol; proven on hardware (handshake → unlock → ride). No
+  server, account, or activation needed.
+- Python client: scan, `0000` handshake, unlock, gear/light/cruise, live telemetry, plus
+  `ver` / `sn` / `reset` commands and handshake-result printing.
+- Qt app: battery/speed dashboard; status (lock / NORMAL↔SPORT / light / cruise / trip /
+  total / fault); controls (unlock/lock, mode, light, cruise, reset, connect, disconnect
+  without locking); device-info card (serial + controller/BLE firmware); real handshake
+  detection with a wrong-password prompt; indeterminate activity bar while busy.
+- Honest UI — every readout shows "—" until live telemetry arrives (`hasData`).
+- Diagnosed "won't go" as non-zero-start (kick-to-start), not a lock.
+- Android + Windows release CI (`android.yml`, `windows.yml`); `v0.1.0` published — APK
+  installs and launches on a real phone.
