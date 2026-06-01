@@ -1,53 +1,47 @@
 # Smacircle S1 — Offline Revival
 
-Reverse-engineered, **server-free** control for the **Smacircle S1** folding e-bike —
-a Python BLE client and a Qt 6 desktop/mobile app that let you actually *use* a
-device the manufacturer abandoned.
+Reverse-engineered, **server-free** control for the **Smacircle S1** folding e-bike — a Python
+BLE client and a Qt 6 desktop/mobile app that let you actually *use* a device the manufacturer
+abandoned.
 
-> **Status:** working. The S1 connects, unlocks, streams live telemetry, and rides —
-> with **no account, no server, no "activation."** Prebuilt **Android APK** and portable
-> **Windows** build are on the
-> [Releases](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page.
-> Roadmap in [BACKLOG.md](BACKLOG.md).
+> **Status:** working. The S1 connects, unlocks, streams live telemetry, and rides — **no
+> account, no server, no "activation."** Prebuilt **Android APK** and portable **Windows** build
+> on the [Releases](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page. Roadmap in
+> [BACKLOG.md](BACKLOG.md).
 
 ---
 
 ## Why this exists
 
-The Smacircle S1 is a "connected" scooter: out of the box it demands to be
-**activated through the vendor's phone app** before the wheel will unlock. By
-**2026 that path is dead**:
+The S1 is a "connected" scooter: out of the box it demands **activation through the vendor's app**
+before the wheel unlocks. By **2026 that path is dead**:
 
-- The official app is **gone from both the App Store and Google Play** — you simply
-  cannot install it anymore.
-- Track down an **old APK** and you get stuck at sign-up: the **SMS verification code
-  never arrives.** The app routes verification through MobTech's `SMSSDK`, tied to the
-  vendor's now-defunct backend — no live backend, no code, no account, no unlock.
-- So a **brand-new, never-activated** unit is, *by the vendor's own design*, a
-  **paperweight.**
+- The official app is **gone from both the App Store and Google Play.**
+- An **old APK** stalls at sign-up — the **SMS verification code never arrives** (it routes through
+  MobTech's `SMSSDK`, tied to the vendor's defunct backend). No backend, no code, no unlock.
+- So a **brand-new, never-activated** unit is, by the vendor's own design, a **paperweight.**
 
-Except it never had to be. The "activation" was never real protection — and this
-project proves it on real hardware.
+Except it never had to be — the "activation" was never real protection, and this project proves it
+on real hardware.
 
 ## What we found
 
-Decompiling the app (jadx) and inspecting the BLE link shows the S1 speaks a protocol
-the app calls **"M0"** over the standard **Nordic UART Service** (`6e400001-…`):
+Decompiling the app (jadx) and sniffing the BLE link: the S1 speaks a protocol the app calls
+**"M0"** over the standard **Nordic UART Service** (`6e400001-…`):
 
-- **No cryptography.** The "encryption" is a keyless XOR chain; the checksum is
-  `0xFFFF − sum`. Every command is reproducible offline.
-- **The BLE password is `0000`.** That is the entire handshake.
-- **"Activation" is server bookkeeping.** The app calls `POST_ACTIVATE_PRODUCT` to bind
-  the bike to an account, then sends an ordinary `unlock` command. **The firmware never
-  checks whether the server approved** — send the unlock yourself and the lock releases.
-  Confirmed on a never-activated unit: lock released, telemetry flowing, rides fine.
-- **"Won't move" is not a lock** — the S1 is **non-zero-start** (kick-to-start): push off
-  with your foot first, *then* the throttle engages. Documented, normal behaviour — not DRM.
+- **No cryptography.** The "encryption" is a keyless XOR chain; the checksum is `0xFFFF − sum`.
+  Every command is reproducible offline.
+- **The BLE password is `0000`** — the entire handshake.
+- **"Activation" is server bookkeeping.** The app calls `POST_ACTIVATE_PRODUCT` to bind the bike to
+  an account, then sends a plain `unlock`. **The firmware never checks the server** — send the
+  unlock yourself and the lock releases. Confirmed on a never-activated unit.
+- **"Won't move" is not a lock** — the S1 is **non-zero-start**: kick off first, *then* the throttle
+  engages. Normal, documented behaviour — not DRM.
 
-### What's actually inside the app
+### What was inside the original app
 
-For a product whose single job is "talk to a scooter over Bluetooth," the codebase is
-mostly **third-party SDK glue**:
+For a product whose one job is "talk to a scooter over Bluetooth," the vendor's app is mostly
+**third-party SDK glue**:
 
 | SDK | Package | Purpose |
 |-----|---------|---------|
@@ -56,104 +50,86 @@ mostly **third-party SDK glue**:
 | MobTech ShareSDK | `cn.sharesdk`, `com.mob.*` | social sharing |
 | MobTech SMSSDK | `cn.smssdk` | SMS verification (the one that never arrives) |
 
-The genuinely device-specific part — the BLE protocol — is a few hundred lines of
-XOR-and-checksum. Everything else is account plumbing, third-party data SDKs, and
-"activation" ceremony.
+The device-specific part — the BLE protocol — is a few hundred lines of XOR-and-checksum. The rest
+is account plumbing, third-party data SDKs, and "activation" ceremony.
 
 ## Editorial
 
-None of this should have been necessary. A company sold a *physical* product that
-depends on its servers, then took the servers **and** the apps away and walked off —
-leaving paying owners holding bricks, including brand-new units that were never opened.
-That is the part worth being angry about.
+None of this should have been necessary. A company sold a *physical* product that depends on its
+servers, then took the servers **and** the apps away and walked off — leaving paying owners holding
+bricks, including brand-new units never opened. That's the part worth being angry about.
 
-And the "activation" that supposedly justified all of it is theatre. The hardware never
-needed it; the lock is released by a plain BLE write any client can send. The server's
-only real job was writing your name next to a serial number — bookkeeping dressed up as
-security.
+The "activation" that justified it is theatre: the hardware never needed it, the lock yields to a
+plain BLE write, and the server's only real job was writing your name next to a serial number —
+bookkeeping dressed up as security.
 
-Read the decompiled app and you don't find embedded engineering. You find a thin
-Bluetooth shim bolted onto a stack of third-party Chinese SDKs (Alibaba Cloud, MobTech)
-plus a heap of account/"activation" bloat. This is not the work of embedded developers —
-it's the work of **Klappradfahrer** (German: "folding-bike riders" — weekend dabblers,
-not engineers), a crew of **kutyaütő balfaszok** (Hungarian, roughly: bungling
-good-for-nothing clowns) who wired SDKs together and called it a product. The actual
-scooter protocol is trivial; the effort went everywhere *except* shipping something that
-outlives its vendor.
+Read the decompiled app and you find no embedded engineering — just a thin Bluetooth shim bolted
+onto a stack of third-party Chinese SDKs (Alibaba, MobTech) and a heap of "activation" bloat. This
+is the work of **Klappradfahrer** (German: "folding-bike riders" — weekend dabblers, not engineers),
+a crew of **kutyaütő balfaszok** (Hungarian, roughly: bungling good-for-nothing clowns) who wired
+SDKs together and called it a product. The scooter protocol is trivial; the effort went everywhere
+*except* building something that outlives its vendor.
 
-*(Opinions in this section are the author's. The technical claims above come straight
-from the app's own bytecode and from testing on real hardware.)*
+*(Opinions here are the author's; the technical claims above come straight from the app's own
+bytecode and from testing on real hardware.)*
 
 ## Repository layout
 
 | Path | What |
 |------|------|
 | [`ble_client/`](ble_client/) | Python (`bleak`) reference client — scan, handshake, unlock, gear/light/cruise, live telemetry. Proven on hardware first. |
-| [`qt_app/`](qt_app/) | C++/QML (Qt 6) app — battery/speed dashboard, one-tap unlock + controls. Desktop today; Android next. |
+| [`qt_app/`](qt_app/) | Qt 6 C++/QML app — battery/speed dashboard, one-tap unlock + controls. Desktop + Android. |
 | [`BACKLOG.md`](BACKLOG.md) | Ideas & roadmap. |
-| `work/` | Local decompilation + tooling. **Not committed** (third-party copyright, large). |
-
-## Quick start
-
-### Python client
-```powershell
-cd ble_client
-python -m venv venv; .\venv\Scripts\pip install bleak
-.\venv\Scripts\python.exe ride.py scan                 # find the scooter
-.\venv\Scripts\python.exe ride.py ride --address <ADDR># connect, handshake, control
-```
-
-### Qt app (Windows desktop)
-Needs Qt 6.10 (MSVC) + the Qt Bluetooth module. Then:
-```bat
-cd qt_app
-build.bat        :: configure + build (Release)
-deploy.bat       :: bundle the Qt runtime (first time only)
-run.bat          :: launch
-```
-
-## Platforms
-
-The app runs on the desktop today. Which mobile platform it ships to is still open —
-but **Android is the likely target**: APKs install freely, never expire, and cost
-nothing to put on a phone.
-
-**iOS is unlikely.** Apple requires a paid Developer Program membership (~US$100/year)
-before an app may run on a real iPhone, and there is no free, permanent sideload path.
-Beyond the cost: the author is an **embedded developer**, not an iOS app studio — writing
-and shepherding App Store software is simply not the point of this project. The Qt/QML
-codebase is cross-platform and *ready* for iOS, so if someone with an Apple account wants
-to carry that build, the door is open. Otherwise: Android.
+| `work/` | Local decompilation + tooling. **Not committed** (third-party copyright). |
 
 ## Download & install
 
-Grab the latest build from the
-[**Releases**](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page:
+From the [**Releases**](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page:
 
-- **Android** — `SmacircleS1.apk`. Requires **Android 9.0+** (Qt 6.10's floor). Allow "install
-  unknown apps", tap to install; first launch asks for the Bluetooth permission.
-- **Windows** — `SmacircleS1-windows-x64.zip`. Unzip, run `SmacircleQt.exe` (portable — the Qt
-  runtime is bundled).
+- **Android** — `SmacircleS1.apk`. Needs **Android 9.0+**. Allow "install unknown apps", tap to
+  install; first launch asks for the Bluetooth permission.
+- **Windows** — `SmacircleS1-windows-x64.zip`. Unzip, run `SmacircleQt.exe` (portable).
+
+## Build from source
+
+**Python client:**
+```powershell
+cd ble_client
+python -m venv venv; .\venv\Scripts\pip install bleak
+.\venv\Scripts\python.exe ride.py scan                  # find the scooter
+.\venv\Scripts\python.exe ride.py ride --address <ADDR> # connect + control
+```
+
+**Qt app (Windows desktop)** — needs Qt 6.10 (MSVC) + Qt Bluetooth:
+```bat
+cd qt_app
+build.bat   :: configure + build (Release)
+deploy.bat  :: bundle the Qt runtime (first time)
+run.bat     :: launch
+```
 
 ## Continuous integration
-
-Two GitHub Actions pipelines produce the release builds — no local toolchain required:
 
 | Workflow | Triggers | Output |
 |----------|----------|--------|
 | [`android.yml`](.github/workflows/android.yml) | push `main`, `v*` tag, manual | `arm64-v8a` APK — artifact on push, Release asset on tag |
 | [`windows.yml`](.github/workflows/windows.yml) | `v*` tag, manual | `windeployqt` portable zip — Release asset on tag |
 
-Push a tag `vX.Y.Z` to cut a Release carrying both builds.
+Push a tag `vX.Y.Z` to cut a Release carrying both builds. With no setup the APK is signed with an
+ephemeral key (installs fine; updates need a reinstall); for stable in-place updates add the repo
+secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEY_PASSWORD`.
 
-**Android signing.** With no setup, CI signs the APK with an ephemeral key (installs fine, but a
-later update needs the old app uninstalled first). For stable in-place updates, add these repo
-secrets and CI uses them instead: `ANDROID_KEYSTORE_BASE64` (base64 of your `.jks`),
-`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+## Platforms
+
+Desktop and Android are covered. **iOS isn't** — Apple requires a paid Developer Program
+(~US$100/yr) before an app runs on a real iPhone, with no free permanent sideload. And the author
+is an **embedded developer, not an iOS app studio**. The Qt/QML is cross-platform and *ready* for
+iOS, so the door's open if someone with an Apple account wants to carry that build.
 
 ## Disclaimer
 
-Personal **interoperability** project for hardware **I own**. No vendor code is
-redistributed here — the decompiled app stays in `work/`, which is git-ignored. Not
-affiliated with or endorsed by the manufacturer. Provided **as-is, no warranty**; an
-e-bike is a motor vehicle and you assume all risk operating it. Mind your local road laws.
+Personal **interoperability** project for hardware **I own**. No vendor code is redistributed — the
+decompiled app stays in `work/` (git-ignored). Not affiliated with or endorsed by the manufacturer.
+Provided **as-is, no warranty**; an e-bike is a motor vehicle and you assume all risk operating it.
+Mind your local road laws.
