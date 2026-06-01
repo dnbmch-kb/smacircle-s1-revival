@@ -76,8 +76,8 @@ async def telemetry_loop(state):
 async def repl(client, response, state):
     loop = asyncio.get_event_loop()
     write = lambda data: client.write_gatt_char(M0.WRITE, data, response=response)
-    help_text = ("commands: unlock | lock | gear N | light on|off | "
-                 "cruise on|off | status | raw <hex> | help | quit")
+    help_text = ("commands: unlock | lock | gear N | light on|off | cruise on|off | "
+                 "ver | sn | reset | status | raw <hex> | help | quit")
     print(help_text)
     while True:
         line = (await loop.run_in_executor(None, input, "> ")).strip()
@@ -100,8 +100,26 @@ async def repl(client, response, state):
                 await write(M0.light(parts[1].lower() == "on")); print(f"  -> light {parts[1]}")
             elif cmd == "cruise":
                 await write(M0.cruise(parts[1].lower() == "on")); print(f"  -> cruise {parts[1]}")
+            elif cmd == "ver":
+                await write(M0.check_control_version())
+                await asyncio.sleep(0.2)
+                await write(M0.check_ble_version())
+                print("  -> version queries sent (watch for [info] lines)")
+            elif cmd == "sn":
+                await write(M0.get_card_sn())
+                print("  -> serial query sent (watch for [info] line)")
+            elif cmd == "reset":
+                ans = (await loop.run_in_executor(
+                    None, input, "  Reset TOTAL mileage? irreversible [y/N] ")).strip().lower()
+                if ans == "y":
+                    await write(M0.clear_mileage()); print("  -> mileage reset sent")
+                else:
+                    print("  cancelled")
             elif cmd == "status":
                 print("  ", state.get("tele") or "(no telemetry yet)")
+                info = {k: state[k] for k in ("serial", "ctrl_ver", "ble_ver") if state.get(k)}
+                if info:
+                    print("  info:", info)
             elif cmd == "raw":
                 data = bytes.fromhex("".join(parts[1:]))
                 await write(data); print(f"  -> sent {data.hex(' ')}")
@@ -121,9 +139,19 @@ async def ride(args):
     state = {"run": True, "tele": None}
 
     def on_notify(_char, data):
-        t = M0.parse(bytes(data))
-        if t:
-            state["tele"] = t
+        kind, val = M0.parse_frame(bytes(data))
+        if kind == "status" and val:
+            state["tele"] = val
+        elif kind == "control_version":
+            state["ctrl_ver"] = val; print(f"\r  [info] controller FW: {val}\n> ", end="", flush=True)
+        elif kind == "ble_version":
+            state["ble_ver"] = val;  print(f"\r  [info] bluetooth FW: {val}\n> ", end="", flush=True)
+        elif kind == "serial":
+            state["serial"] = val;   print(f"\r  [info] serial: {val}\n> ", end="", flush=True)
+        elif kind == "handshake_ok":
+            print("\r  [handshake OK]\n> ", end="", flush=True)
+        elif kind == "handshake_fail":
+            print("\r  [handshake FAILED — wrong password for this unit]\n> ", end="", flush=True)
 
     async with BleakClient(dev) as client:
         print(f"Connected: {client.address}")
@@ -133,6 +161,11 @@ async def ride(args):
         print(f"Handshake: sending password '{args.password}' ...")
         await client.write_gatt_char(M0.WRITE, M0.password(args.password), response=response)
         await asyncio.sleep(1.5)
+
+        # Read-only device info (firmware + serial) — prints as [info] lines.
+        for q in (M0.check_control_version(), M0.check_ble_version(), M0.get_card_sn()):
+            await client.write_gatt_char(M0.WRITE, q, response=response)
+            await asyncio.sleep(0.25)
 
         if not args.no_unlock:
             if not args.yes:

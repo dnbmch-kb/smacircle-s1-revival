@@ -3,6 +3,7 @@
 // No crypto: "encode" is a keyless XOR chain; checksum is 0xFFFF^sum.
 #pragma once
 #include <QByteArray>
+#include <QString>
 #include <QtGlobal>
 #include <initializer_list>
 
@@ -92,6 +93,55 @@ inline Telemetry parse(const QByteArray &f)
         t.valid    = true;
     }
     return t;
+}
+
+// ---- richer classifier: status / version / serial / handshake-ack ---------
+enum class FrameKind { Unknown, Status, ControlVersion, BleVersion, Serial,
+                       HandshakeOk, HandshakeFail };
+
+struct Frame {
+    FrameKind kind = FrameKind::Unknown;
+    Telemetry status;   // valid when kind == Status
+    QString   text;     // version string or serial when applicable
+};
+
+inline Frame parseFrame(const QByteArray &f)
+{
+    Frame out;
+    if (f.size() < 8) return out;
+    if (quint8(f[0]) != 0xA5 || quint8(f[1]) != 0x5A) return out;
+    const QByteArray d = decode(f);
+    const int len  = d.size();
+    const int addr = quint8(d[3]);
+    const int typ  = quint8(d[4]);
+    const int ex   = quint8(d[5]);
+
+    if (typ == 7 || typ == 8 || typ == 9)        // firmware-update acks — ignore
+        return out;
+
+    if (typ == 1) {                              // reply to a query command
+        if (ex == 0x10) {                        // getCardSN -> ASCII serial
+            out.kind = FrameKind::Serial;
+            out.text = QString::fromLatin1(d.mid(6, len - 8)).trimmed();
+        } else {                                 // version -> decoded bytes 6,7
+            out.kind = (addr == 0x21) ? FrameKind::BleVersion : FrameKind::ControlVersion;
+            out.text = QString::asprintf("%02X%02X", quint8(d[7]), quint8(d[6]));
+        }
+        return out;
+    }
+
+    if (typ == 100 || ex == 0) {
+        if (len < 16) {                          // short frame == handshake ack
+            if (ex == 0)
+                out.kind = (quint8(d[2]) == 3) ? FrameKind::HandshakeFail
+                                               : FrameKind::HandshakeOk;
+            return out;
+        }
+        out.status = parse(f);                   // reuse the status parser
+        if (out.status.valid) out.kind = FrameKind::Status;
+        return out;
+    }
+    return out;
 }
 
 } // namespace M0

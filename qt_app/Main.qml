@@ -6,8 +6,8 @@ ApplicationWindow {
     id: win
     visible: true
     width: 440
-    height: 820
-    title: "Smacircle S1"
+    height: 860
+    title: "Smacircle S1 - freed"
     color: bg
 
     readonly property color bg:     "#0f1116"
@@ -18,6 +18,8 @@ ApplicationWindow {
     readonly property color txt:    "#eef1f6"
     readonly property color dim:    "#7e8595"
     readonly property string unk:   "—"   // shown whenever the value is genuinely unknown
+    // "working on it" — scanning, connecting, authenticating, or awaiting first telemetry
+    readonly property bool busy: ble.scanning || (ble.connected && !ble.hasData)
 
     // ---------- reusable styled button ----------
     component Btn: Button {
@@ -56,6 +58,22 @@ ApplicationWindow {
         Label { text: parent.value; color: parent.valueColor; font.pixelSize: 14; font.bold: true }
     }
 
+    // ---------- reset-mileage confirmation ----------
+    Dialog {
+        id: confirmReset
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(win.width - 60, 330)
+        modal: true
+        standardButtons: Dialog.Yes | Dialog.Cancel
+        onAccepted: ble.resetMileage()
+        background: Rectangle { radius: 12; color: win.card; border.color: win.line; border.width: 1 }
+        contentItem: Label {
+            text: "Reset the total mileage counter?\nThis cannot be undone."
+            color: win.txt; wrapMode: Text.WordWrap; padding: 8
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 18
@@ -64,7 +82,7 @@ ApplicationWindow {
         // ---- header ----
         RowLayout {
             Layout.fillWidth: true
-            Label { text: "Smacircle S1"; color: win.txt; font.pixelSize: 24; font.bold: true }
+            Label { text: "Smacircle S1 - freed"; color: win.txt; font.pixelSize: 24; font.bold: true }
             Item { Layout.fillWidth: true }
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
@@ -80,6 +98,36 @@ ApplicationWindow {
         Label {
             text: ble.status; color: win.dim; font.pixelSize: 12
             wrapMode: Text.WordWrap; Layout.fillWidth: true
+        }
+
+        // ---- indeterminate activity bar (visible while busy) ----
+        Rectangle {
+            id: activity
+            Layout.fillWidth: true
+            Layout.preferredHeight: 3
+            radius: 2
+            color: "#1b2030"
+            clip: true
+            visible: win.busy
+
+            // animate a dimensionless 0..1 phase (always valid); derive x from it
+            property real phase: 0.0
+            NumberAnimation on phase {
+                running: win.busy
+                loops: Animation.Infinite
+                from: 0.0; to: 1.0
+                duration: 1150
+                easing.type: Easing.InOutQuad
+            }
+            Rectangle {
+                id: blip
+                height: parent.height
+                width: parent.width * 0.35
+                radius: 2
+                color: win.accent
+                // sweep from just off the left edge to just off the right edge
+                x: (activity.width + width) * activity.phase - width
+            }
         }
 
         // ---- hero tiles: battery + speed (— until telemetry arrives) ----
@@ -141,6 +189,21 @@ ApplicationWindow {
             }
         }
 
+        // ---- device info (firmware + serial; populated shortly after connect) ----
+        Rectangle {
+            visible: ble.connected
+            Layout.fillWidth: true; radius: 16; color: win.card
+            border.color: win.line; border.width: 1
+            Layout.preferredHeight: infoCol.implicitHeight + 28
+            ColumnLayout {
+                id: infoCol
+                anchors.fill: parent; anchors.margins: 14; spacing: 9
+                Stat { label: "Serial";        value: ble.serial !== "" ? ble.serial : win.unk }
+                Stat { label: "Controller FW"; value: ble.controlVersion !== "" ? ble.controlVersion : win.unk }
+                Stat { label: "Bluetooth FW";  value: ble.bleVersion !== "" ? ble.bleVersion : win.unk }
+            }
+        }
+
         // ---- connect (shown until connected) ----
         Btn {
             Layout.fillWidth: true
@@ -151,10 +214,41 @@ ApplicationWindow {
             onClicked: ble.startScan()
         }
 
-        // ---- primary unlock / lock (neutral until status known) ----
+        // ---- wrong-password prompt (this unit isn't on 0000) ----
+        Rectangle {
+            visible: ble.connected && ble.wrongPassword
+            Layout.fillWidth: true; radius: 14; color: win.card
+            border.color: win.danger; border.width: 1
+            Layout.preferredHeight: pwCol.implicitHeight + 28
+            ColumnLayout {
+                id: pwCol
+                anchors.fill: parent; anchors.margins: 14; spacing: 10
+                Label { text: "This unit's Bluetooth password isn't 0000. Enter it:"
+                        color: win.txt; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                RowLayout {
+                    Layout.fillWidth: true; spacing: 10
+                    TextField {
+                        id: pwField
+                        Layout.fillWidth: true
+                        text: ble.password
+                        inputMethodHints: Qt.ImhDigitsOnly
+                        maximumLength: 4
+                        color: win.txt
+                        background: Rectangle { radius: 8; color: "#11141b"; border.color: win.line; border.width: 1 }
+                    }
+                    Btn {
+                        text: "Connect"; implicitWidth: 120
+                        fill: win.accent; fg: "#0a0c10"; edge: "transparent"
+                        onClicked: { ble.setPassword(pwField.text); ble.retryHandshake() }
+                    }
+                }
+            }
+        }
+
+        // ---- primary unlock / lock ----
         Btn {
             Layout.fillWidth: true; implicitHeight: 64
-            visible: ble.connected
+            visible: ble.connected && !ble.wrongPassword
             enabled: ble.hasData
             text: ble.hasData ? (ble.locked ? "UNLOCK" : "LOCK") : "Reading status…"
             font.pixelSize: 21
@@ -165,6 +259,7 @@ ApplicationWindow {
 
         // ---- mode / light ----
         RowLayout {
+            visible: ble.connected && !ble.wrongPassword
             Layout.fillWidth: true; spacing: 12
             Btn {
                 Layout.fillWidth: true; enabled: ble.hasData
@@ -184,6 +279,7 @@ ApplicationWindow {
 
         // ---- cruise / reset ----
         RowLayout {
+            visible: ble.connected && !ble.wrongPassword
             Layout.fillWidth: true; spacing: 12
             Btn {
                 Layout.fillWidth: true; enabled: ble.hasData
@@ -193,9 +289,9 @@ ApplicationWindow {
                 onClicked: ble.setCruise(!ble.cruise)
             }
             Btn {
-                Layout.fillWidth: true; enabled: ble.connected
-                text: "Reset trip"
-                onClicked: ble.resetMileage()
+                Layout.fillWidth: true; enabled: ble.hasData
+                text: "Reset mileage"
+                onClicked: confirmReset.open()
             }
         }
 

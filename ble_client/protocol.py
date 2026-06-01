@@ -103,6 +103,11 @@ class M0:
     def get_card_sn(cls):
         return cls._finalize([0xA5, 0x5A, 0x05, 0x20, 0x01, 0x10, 0x0E, 0x00, 0, 0])
 
+    @classmethod
+    def clear_mileage(cls):
+        """clearAllMileage — likely resets the TOTAL odometer (not just trip)."""
+        return cls._finalize([0xA5, 0x5A, 0x05, 0x20, 0x03, 0xF5, 0x43, 0x4C, 0, 0])
+
     # --- parse device telemetry (parserInfo in M0Protocol.java) -----------
     @classmethod
     def parse(cls, frame):
@@ -130,6 +135,33 @@ class M0:
                 "total_km": le(d[12], d[13], d[14], d[15]) / 100.0,
             }
         return None
+
+    @classmethod
+    def parse_frame(cls, frame):
+        """Classify any device->app frame. Returns (kind, value):
+        kind in {'status','control_version','ble_version','serial',
+                 'handshake_ok','handshake_fail', None}."""
+        if not frame or len(frame) < 8:
+            return (None, None)
+        if frame[0] != 0xA5 or frame[1] != 0x5A:
+            return (None, None)
+        d = cls.decode(frame)
+        ln, addr, typ, ex = len(d), d[3], d[4], d[5]
+        if typ in (7, 8, 9):                       # firmware-update acks
+            return (None, None)
+        if typ == 1:                               # reply to a query command
+            if ex == 0x10:                         # getCardSN -> ASCII serial
+                sn = bytes(d[6:ln - 2]).decode("ascii", "ignore").strip("\x00 ").strip()
+                return ("serial", sn)
+            ver = f"{d[7]:02X}{d[6]:02X}"           # version -> decoded bytes 6,7
+            return (("ble_version" if addr == 0x21 else "control_version"), ver)
+        if typ == 100 or ex == 0:
+            if ln < 16:                            # short frame == handshake ack
+                if ex == 0:
+                    return (("handshake_fail" if d[2] == 3 else "handshake_ok"), None)
+                return (None, None)
+            return ("status", cls.parse(frame))
+        return (None, None)
 
 
 # ---------------------------------------------------------------------------

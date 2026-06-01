@@ -28,6 +28,11 @@ class BleController : public QObject
     Q_PROPERTY(bool    fault   READ fault   NOTIFY telemetryChanged)
     Q_PROPERTY(double  trip    READ trip    NOTIFY telemetryChanged)
     Q_PROPERTY(double  total   READ total   NOTIFY telemetryChanged)
+    Q_PROPERTY(QString serial         READ serial         NOTIFY infoChanged)
+    Q_PROPERTY(QString controlVersion READ controlVersion NOTIFY infoChanged)
+    Q_PROPERTY(QString bleVersion     READ bleVersion     NOTIFY infoChanged)
+    Q_PROPERTY(QString password       READ password WRITE setPassword NOTIFY passwordChanged)
+    Q_PROPERTY(bool    wrongPassword  READ wrongPassword  NOTIFY wrongPasswordChanged)
 
 public:
     explicit BleController(QObject *parent = nullptr);
@@ -47,6 +52,11 @@ public:
     bool    fault() const      { return m_t.error; }
     double  trip() const       { return m_t.tripKm; }
     double  total() const      { return m_t.totalKm; }
+    QString serial() const         { return m_serial; }
+    QString controlVersion() const { return m_ctrlVer; }
+    QString bleVersion() const     { return m_bleVer; }
+    QString password() const       { return m_password; }
+    bool    wrongPassword() const  { return m_wrongPassword; }
 
     Q_INVOKABLE void startScan();
     Q_INVOKABLE void disconnectScooter();
@@ -56,6 +66,8 @@ public:
     Q_INVOKABLE void setLight(bool on);
     Q_INVOKABLE void setCruise(bool on);
     Q_INVOKABLE void resetMileage();
+    Q_INVOKABLE void setPassword(const QString &pw);
+    Q_INVOKABLE void retryHandshake();   // re-send the (possibly new) password
 
 signals:
     void statusChanged();
@@ -63,12 +75,18 @@ signals:
     void connectedChanged();
     void readyChanged();
     void telemetryChanged();
+    void infoChanged();
+    void passwordChanged();
+    void wrongPasswordChanged();
 
 private:
     void setStatus(const QString &s);
     void beginScan();   // actual discovery, after permission is granted
     void connectToDevice(const QBluetoothDeviceInfo &info);
     void writeCommand(const QByteArray &cmd);
+    void sendHandshake();
+    void onReady();          // once handshake is confirmed / first telemetry seen
+    void queryDeviceInfo();  // serial + controller/BLE firmware versions
 
     void onDeviceDiscovered(const QBluetoothDeviceInfo &info);
     void onScanFinished();
@@ -91,4 +109,9 @@ private:
     bool m_ready     = false;
     bool m_hasData   = false;
     M0::Telemetry m_t;
+
+    QString m_serial, m_ctrlVer, m_bleVer;
+    QString m_password = QStringLiteral("0000");
+    bool m_wrongPassword = false;
+    bool m_infoQueried   = false;
 };

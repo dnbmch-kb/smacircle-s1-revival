@@ -66,7 +66,10 @@ void BleController::startScan()
 void BleController::beginScan()
 {
     m_haveTarget = false;
-    m_hasData = false; emit telemetryChanged();
+    m_hasData = false; m_infoQueried = false;
+    m_serial.clear(); m_ctrlVer.clear(); m_bleVer.clear();
+    if (m_wrongPassword) { m_wrongPassword = false; emit wrongPasswordChanged(); }
+    emit telemetryChanged(); emit infoChanged();
     m_scanning = true; emit scanningChanged();
     setStatus(QStringLiteral("Scanning…"));
     m_agent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
@@ -108,8 +111,10 @@ void BleController::connectToDevice(const QBluetoothDeviceInfo &info)
         m_control->discoverServices();
     });
     connect(m_control, &QLowEnergyController::disconnected, this, [this]() {
-        m_connected = false; m_ready = false; m_hasData = false;
-        emit connectedChanged(); emit readyChanged(); emit telemetryChanged();
+        m_connected = false; m_ready = false; m_hasData = false; m_infoQueried = false;
+        m_serial.clear(); m_ctrlVer.clear(); m_bleVer.clear();
+        if (m_wrongPassword) { m_wrongPassword = false; emit wrongPasswordChanged(); }
+        emit connectedChanged(); emit readyChanged(); emit telemetryChanged(); emit infoChanged();
         setStatus(QStringLiteral("Disconnected"));
     });
     connect(m_control, &QLowEnergyController::errorOccurred, this,
@@ -166,20 +171,77 @@ void BleController::onServiceStateChanged(QLowEnergyService::ServiceState s)
         m_service->writeDescriptor(cccd, QByteArray::fromHex("0100"));
 
     m_connected = true; emit connectedChanged();
-    setStatus(QStringLiteral("Connected — sending handshake…"));
+    setStatus(QStringLiteral("Connected — authenticating…"));
 
-    // Mirror the app: brief pause, then send the default 0000 password.
-    QTimer::singleShot(800, this, [this]() {
-        writeCommand(M0::password(0));
-        m_ready = true; emit readyChanged();
-        setStatus(QStringLiteral("Ready. Unlock, then kick-start to ride."));
-    });
+    // Mirror the app: brief pause, then send the password. Readiness is set
+    // only once the device confirms (HandshakeOk) or telemetry starts flowing.
+    QTimer::singleShot(800, this, [this]() { sendHandshake(); });
 }
 
 void BleController::onCharacteristicChanged(const QLowEnergyCharacteristic &, const QByteArray &v)
 {
-    const M0::Telemetry t = M0::parse(v);
-    if (t.valid) { m_t = t; m_hasData = true; emit telemetryChanged(); }
+    const M0::Frame fr = M0::parseFrame(v);
+    switch (fr.kind) {
+    case M0::FrameKind::Status:
+        m_t = fr.status;
+        if (!m_hasData) m_hasData = true;
+        emit telemetryChanged();
+        onReady();                      // telemetry flowing => handshake succeeded
+        break;
+    case M0::FrameKind::HandshakeOk:
+        onReady();
+        break;
+    case M0::FrameKind::HandshakeFail:
+        m_ready = false; emit readyChanged();
+        if (!m_wrongPassword) { m_wrongPassword = true; emit wrongPasswordChanged(); }
+        setStatus(QStringLiteral("Wrong Bluetooth password for this unit."));
+        break;
+    case M0::FrameKind::ControlVersion: m_ctrlVer = fr.text; emit infoChanged(); break;
+    case M0::FrameKind::BleVersion:     m_bleVer  = fr.text; emit infoChanged(); break;
+    case M0::FrameKind::Serial:         m_serial  = fr.text; emit infoChanged(); break;
+    default: break;
+    }
+}
+
+void BleController::sendHandshake()
+{
+    bool ok = false;
+    const int val = m_password.toInt(&ok);
+    setStatus(QStringLiteral("Authenticating (password %1)…").arg(m_password));
+    writeCommand(M0::password(ok ? val : 0));
+}
+
+void BleController::onReady()
+{
+    if (m_ready) return;
+    m_ready = true;
+    if (m_wrongPassword) { m_wrongPassword = false; emit wrongPasswordChanged(); }
+    emit readyChanged();
+    setStatus(QStringLiteral("Ready. Unlock, then kick-start to ride."));
+    queryDeviceInfo();
+}
+
+void BleController::queryDeviceInfo()
+{
+    if (m_infoQueried) return;
+    m_infoQueried = true;
+    // Read-only info queries, staggered so the replies don't collide.
+    writeCommand(M0::checkControlVersion());
+    QTimer::singleShot(250, this, [this]() { writeCommand(M0::checkBleVersion()); });
+    QTimer::singleShot(500, this, [this]() { writeCommand(M0::getCardSN()); });
+}
+
+void BleController::setPassword(const QString &pw)
+{
+    if (pw == m_password) return;
+    m_password = pw;
+    emit passwordChanged();
+}
+
+void BleController::retryHandshake()
+{
+    if (m_wrongPassword) { m_wrongPassword = false; emit wrongPasswordChanged(); }
+    sendHandshake();
 }
 
 // ---- commands -------------------------------------------------------------
