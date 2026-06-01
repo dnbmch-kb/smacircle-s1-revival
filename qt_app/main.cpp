@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("Smacircle S1"));
     app.setOrganizationName(QStringLiteral("Smacircle"));
+    app.setApplicationVersion(QStringLiteral(APP_VERSION));
     app.setWindowIcon(QIcon(QStringLiteral(":/icon/icon.png")));
 
     // Declare the controller BEFORE the engine so the engine (and its QML

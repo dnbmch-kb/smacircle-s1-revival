@@ -20,6 +20,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tags for git describe (version injection)
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4

@@ -83,6 +83,11 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true
             Label { text: "Smacircle S1 - freed"; color: win.txt; font.pixelSize: 24; font.bold: true }
+            Label {
+                text: Qt.application.version
+                color: win.dim; font.pixelSize: 11
+                Layout.alignment: Qt.AlignBottom; bottomPadding: 4; leftPadding: 6
+            }
             Item { Layout.fillWidth: true }
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
