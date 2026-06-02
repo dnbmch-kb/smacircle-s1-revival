@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # simulation code is compiled out of shipped binaries. Turn ON via build-demo.bat.
 option(SMACIRCLE_DEMO "Build the no-hardware demo (simulated S1)" OFF)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Bluetooth)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Bluetooth Svg)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -50,6 +50,23 @@ qt_add_resources(SmacircleQt "appicon"
     FILES icon/icon.png
 )
 
+# Button icons (white Font Awesome Free SVGs, CC BY 4.0 — see README)
+qt_add_resources(SmacircleQt "btnicons"
+    PREFIX "/"
+    FILES
+        icons/lock.svg
+        icons/lock-open.svg
+        icons/lightbulb.svg
+        icons/gauge-high.svg
+        icons/arrows-rotate.svg
+        icons/link-slash.svg
+        icons/flask.svg
+        icons/bluetooth.svg
+        icons/circle-info.svg
+        icons/rabbit.svg
+        icons/turtle.svg
+)
+
 # Windows: GUI app (no console window) + exe icon (app.rc -> icon/app.ico)
 set_target_properties(SmacircleQt PROPERTIES WIN32_EXECUTABLE ON)
 if(WIN32)
@@ -59,7 +76,7 @@ if(WIN32)
     set_target_properties(SmacircleQt PROPERTIES OUTPUT_NAME "smacircle-s1-revival")
 endif()
 
-target_link_libraries(SmacircleQt PRIVATE Qt6::Quick Qt6::Bluetooth)
+target_link_libraries(SmacircleQt PRIVATE Qt6::Quick Qt6::Bluetooth Qt6::Svg)
 target_compile_definitions(SmacircleQt PRIVATE APP_VERSION="${APP_VERSION}")
 
 if(SMACIRCLE_DEMO)

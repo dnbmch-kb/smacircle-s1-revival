@@ -129,6 +129,10 @@ iOS, so the door's open if someone with an Apple account wants to carry that bui
 MIT — see [LICENSE](LICENSE). Covers this project's own code; it grants no rights to the
 manufacturer's software, which is not included here (see Disclaimer).
 
+UI button icons are [**Font Awesome Free**](https://fontawesome.com) 6.4.2 (icons CC BY 4.0),
+recolored white, in [`qt_app/icons/`](qt_app/icons/). The Mode button's rabbit/turtle are Font
+Awesome **Pro** icons used under the author's license.
+
 ## Disclaimer
 
 Personal **interoperability** project for hardware **I own**. No vendor code is redistributed — the

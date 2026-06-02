@@ -21,12 +21,13 @@ ApplicationWindow {
     // "working on it" — scanning, connecting, authenticating, or awaiting first telemetry
     readonly property bool busy: ble.scanning || (ble.connected && !ble.hasData)
 
-    // ---------- reusable styled button ----------
+    // ---------- reusable styled button (optional white icon before the label) ----------
     component Btn: Button {
         id: b
         property color fill: win.card
         property color fg: win.txt
         property color edge: win.line
+        property url iconSource: ""         // white SVG; empty = text-only ('icon' is taken by Button)
         implicitHeight: 52
         font.pixelSize: 15
         font.bold: true
@@ -37,13 +38,30 @@ ApplicationWindow {
             border.width: 1
             Behavior on color { ColorAnimation { duration: 90 } }
         }
-        contentItem: Text {
-            text: b.text
-            color: b.enabled ? b.fg : "#4b5160"
-            font: b.font
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
+        contentItem: Item {
+            Row {
+                anchors.centerIn: parent
+                spacing: 9
+                Image {
+                    id: btnIcon
+                    visible: b.iconSource != ""
+                    source: b.iconSource
+                    sourceSize.height: 64                       // raster big, scale down = crisp
+                    height: Math.round(b.font.pixelSize * 1.25)
+                    width: implicitHeight > 0 ? height * implicitWidth / implicitHeight : 0
+                    fillMode: Image.PreserveAspectFit
+                    anchors.verticalCenter: parent.verticalCenter
+                    opacity: b.enabled ? 1.0 : 0.4             // dim to match a disabled label
+                }
+                Text {
+                    visible: b.text !== ""
+                    text: b.text
+                    color: b.enabled ? b.fg : "#4b5160"
+                    font: b.font
+                    anchors.verticalCenter: parent.verticalCenter
+                    elide: Text.ElideRight
+                }
+            }
         }
     }
 
@@ -124,7 +142,7 @@ ApplicationWindow {
                 visible: ble.connected
                 Layout.alignment: Qt.AlignVCenter
                 implicitWidth: 36; implicitHeight: 30
-                text: "ⓘ"; font.pixelSize: 16
+                iconSource: "qrc:/icons/circle-info.svg"; font.pixelSize: 16
                 fill: win.card; fg: win.dim
                 onClicked: deviceInfo.open()
             }
@@ -226,6 +244,7 @@ ApplicationWindow {
             visible: !ble.connected
             enabled: !ble.scanning
             text: ble.scanning ? "Scanning…" : "Scan & Connect"
+            iconSource: "qrc:/icons/bluetooth.svg"
             fill: win.accent; fg: "#0a0c10"; edge: "transparent"
             onClicked: ble.startScan()
         }
@@ -236,6 +255,7 @@ ApplicationWindow {
             visible: ble.demoBuild && !ble.connected
             enabled: !ble.scanning
             text: "Try demo — no bike needed"
+            iconSource: "qrc:/icons/flask.svg"
             font.pixelSize: 13
             fill: win.card; fg: win.dim
             onClicked: ble.startDemo()
@@ -278,6 +298,7 @@ ApplicationWindow {
             visible: ble.connected && !ble.wrongPassword
             enabled: ble.hasData
             text: ble.hasData ? (ble.locked ? "UNLOCK" : "LOCK") : "Reading status…"
+            iconSource: ble.hasData ? (ble.locked ? "qrc:/icons/lock-open.svg" : "qrc:/icons/lock.svg") : ""
             font.pixelSize: 21
             fill: !ble.hasData ? win.card : (ble.locked ? win.accent : win.danger)
             fg: "#0a0c10"; edge: "transparent"
@@ -292,8 +313,8 @@ ApplicationWindow {
             Btn {
                 anchors.left: parent.left; anchors.right: parent.horizontalCenter; anchors.rightMargin: 6
                 height: parent.height; enabled: ble.hasData
-                text: ble.hasData ? (ble.gear === 1 ? "● SPORT" : "○ NORMAL") : "Mode"
-                // todo add icons like rabbit and turtle.. and add icons to other buttons too!
+                text: ble.hasData ? (ble.gear === 1 ? "SPORT" : "NORMAL") : "Mode"
+                iconSource: ble.gear === 1 ? "qrc:/icons/rabbit.svg" : "qrc:/icons/turtle.svg"
                 fill: (ble.hasData && ble.gear === 1) ? win.accent : win.card
                 fg: (ble.hasData && ble.gear === 1) ? "#0a0c10" : win.txt
                 onClicked: ble.setGear(ble.gear === 1 ? 0 : 1)
@@ -302,6 +323,7 @@ ApplicationWindow {
                 anchors.left: parent.horizontalCenter; anchors.right: parent.right; anchors.leftMargin: 6
                 height: parent.height; enabled: ble.hasData
                 text: ble.hasData ? (ble.light ? "Light ON" : "Light OFF") : "Light"
+                iconSource: "qrc:/icons/lightbulb.svg"
                 fill: (ble.hasData && ble.light) ? win.accent : win.card
                 fg: (ble.hasData && ble.light) ? "#0a0c10" : win.txt
                 onClicked: ble.setLight(!ble.light)
@@ -317,6 +339,7 @@ ApplicationWindow {
                 anchors.left: parent.left; anchors.right: parent.horizontalCenter; anchors.rightMargin: 6
                 height: parent.height; enabled: ble.hasData
                 text: ble.hasData ? (ble.cruise ? "Cruise ON" : "Cruise OFF") : "Cruise"
+                iconSource: "qrc:/icons/gauge-high.svg"
                 fill: (ble.hasData && ble.cruise) ? win.accent : win.card
                 fg: (ble.hasData && ble.cruise) ? "#0a0c10" : win.txt
                 onClicked: ble.setCruise(!ble.cruise)
@@ -325,6 +348,7 @@ ApplicationWindow {
                 anchors.left: parent.horizontalCenter; anchors.right: parent.right; anchors.leftMargin: 6
                 height: parent.height; enabled: ble.hasData
                 text: "Reset mileage"
+                iconSource: "qrc:/icons/arrows-rotate.svg"
                 onClicked: confirmReset.open()
             }
         }
@@ -336,6 +360,7 @@ ApplicationWindow {
             Layout.fillWidth: true; implicitHeight: 44
             visible: ble.connected
             text: "Disconnect"
+            iconSource: "qrc:/icons/link-slash.svg"
             fill: win.card; fg: win.dim
             onClicked: ble.disconnectScooter()
         }
