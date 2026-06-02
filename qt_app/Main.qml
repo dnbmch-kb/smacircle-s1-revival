@@ -49,6 +49,7 @@ ApplicationWindow {
 
     // ---------- one status row ----------
     component Stat: RowLayout {
+        // todo - looking a bit fad, pimp it up
         property string label
         property string value
         property color valueColor: win.txt
@@ -60,6 +61,7 @@ ApplicationWindow {
 
     // ---------- reset-mileage confirmation ----------
     Dialog {
+        // Todo this dialog yes no is in system language - inconsistent if sys lang is DE and app is full engl..
         id: confirmReset
         parent: Overlay.overlay
         anchors.centerIn: parent
@@ -90,6 +92,7 @@ ApplicationWindow {
             Stat { label: "Serial";        value: ble.serial !== "" ? ble.serial : win.unk }
             Stat { label: "Controller FW"; value: ble.controlVersion !== "" ? ble.controlVersion : win.unk }
             Stat { label: "Bluetooth FW";  value: ble.bleVersion !== "" ? ble.bleVersion : win.unk }
+            Stat { label: "App version";   value: Qt.application.version }
         }
     }
 
@@ -98,16 +101,15 @@ ApplicationWindow {
         anchors.margins: 18
         spacing: 14
 
-        // ---- header ----
+        // ---- header (title flexes + elides so the right-side items never clip) ----
         RowLayout {
             Layout.fillWidth: true
-            Label { text: "Smacircle S1 - freed"; color: win.txt; font.pixelSize: 24; font.bold: true }
+            spacing: 8
             Label {
-                text: Qt.application.version
-                color: win.dim; font.pixelSize: 11
-                Layout.alignment: Qt.AlignBottom; bottomPadding: 4; leftPadding: 6
+                text: "Smacircle S1 - freed"
+                color: win.txt; font.pixelSize: 24; font.bold: true
+                Layout.fillWidth: true; elide: Text.ElideRight
             }
-            Item { Layout.fillWidth: true }
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 width: 9; height: 9; radius: 4.5
@@ -116,11 +118,11 @@ ApplicationWindow {
             Label {
                 text: ble.connected ? "online" : "offline"
                 color: ble.connected ? win.accent : win.dim
-                font.pixelSize: 12; leftPadding: 6
+                font.pixelSize: 12
             }
             Btn {
                 visible: ble.connected
-                Layout.alignment: Qt.AlignVCenter; Layout.leftMargin: 8
+                Layout.alignment: Qt.AlignVCenter
                 implicitWidth: 36; implicitHeight: 30
                 text: "ⓘ"; font.pixelSize: 16
                 fill: win.card; fg: win.dim
@@ -160,6 +162,7 @@ ApplicationWindow {
 
         // ---- hero tiles: battery + speed (— until telemetry arrives) ----
         RowLayout {
+            // why not simpler -> anchor.left : parent.left and anchor right parent right?
             Layout.fillWidth: true; spacing: 14
             Repeater {
                 model: [
@@ -290,6 +293,7 @@ ApplicationWindow {
                 anchors.left: parent.left; anchors.right: parent.horizontalCenter; anchors.rightMargin: 6
                 height: parent.height; enabled: ble.hasData
                 text: ble.hasData ? (ble.gear === 1 ? "● SPORT" : "○ NORMAL") : "Mode"
+                // todo add icons like rabbit and turtle.. and add icons to other buttons too!
                 fill: (ble.hasData && ble.gear === 1) ? win.accent : win.card
                 fg: (ble.hasData && ble.gear === 1) ? "#0a0c10" : win.txt
                 onClicked: ble.setGear(ble.gear === 1 ? 0 : 1)
