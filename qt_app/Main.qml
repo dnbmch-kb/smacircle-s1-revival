@@ -20,6 +20,9 @@ ApplicationWindow {
     readonly property string unk:   "—"   // shown whenever the value is genuinely unknown
     // "working on it" — scanning, connecting, authenticating, or awaiting first telemetry
     readonly property bool busy: ble.scanning || (ble.connected && !ble.hasData)
+    // exact half of a control row, so the 2x2 buttons are equal and never exceed the
+    // screen (12 = the rows' spacing; root spans the window minus its margins)
+    readonly property real ctrlBtnW: (root.width - 12) / 2
 
     // ---------- reusable styled button ----------
     component Btn: Button {
@@ -94,6 +97,7 @@ ApplicationWindow {
     }
 
     ColumnLayout {
+        id: root
         anchors.fill: parent
         anchors.margins: 18
         spacing: 14
@@ -281,36 +285,39 @@ ApplicationWindow {
             onClicked: ble.locked ? ble.unlock() : ble.lock()
         }
 
-        // ---- mode / light / cruise / reset (uniform 2x2 grid) ----
-        GridLayout {
+        // ---- mode / light ----
+        RowLayout {
             visible: ble.connected && !ble.wrongPassword
-            Layout.fillWidth: true
-            columns: 2
-            rowSpacing: 12; columnSpacing: 12
-            uniformCellSizes: true   // all four cells the same width, always within the parent
+            Layout.fillWidth: true; spacing: 12
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
                 text: ble.hasData ? (ble.gear === 1 ? "● SPORT" : "○ NORMAL") : "Mode"
                 fill: (ble.hasData && ble.gear === 1) ? win.accent : win.card
                 fg: (ble.hasData && ble.gear === 1) ? "#0a0c10" : win.txt
                 onClicked: ble.setGear(ble.gear === 1 ? 0 : 1)
             }
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
                 text: ble.hasData ? (ble.light ? "Light ON" : "Light OFF") : "Light"
                 fill: (ble.hasData && ble.light) ? win.accent : win.card
                 fg: (ble.hasData && ble.light) ? "#0a0c10" : win.txt
                 onClicked: ble.setLight(!ble.light)
             }
+        }
+
+        // ---- cruise / reset ----
+        RowLayout {
+            visible: ble.connected && !ble.wrongPassword
+            Layout.fillWidth: true; spacing: 12
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
                 text: ble.hasData ? (ble.cruise ? "Cruise ON" : "Cruise OFF") : "Cruise"
                 fill: (ble.hasData && ble.cruise) ? win.accent : win.card
                 fg: (ble.hasData && ble.cruise) ? "#0a0c10" : win.txt
                 onClicked: ble.setCruise(!ble.cruise)
             }
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
                 text: "Reset mileage"
                 onClicked: confirmReset.open()
             }
