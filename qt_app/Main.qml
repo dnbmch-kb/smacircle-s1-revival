@@ -281,39 +281,36 @@ ApplicationWindow {
             onClicked: ble.locked ? ble.unlock() : ble.lock()
         }
 
-        // ---- mode / light ----
-        RowLayout {
+        // ---- mode / light / cruise / reset (uniform 2x2 grid) ----
+        GridLayout {
             visible: ble.connected && !ble.wrongPassword
-            Layout.fillWidth: true; spacing: 12
+            Layout.fillWidth: true
+            columns: 2
+            rowSpacing: 12; columnSpacing: 12
+            uniformCellSizes: true   // all four cells the same width, always within the parent
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
+                Layout.fillWidth: true; enabled: ble.hasData
                 text: ble.hasData ? (ble.gear === 1 ? "● SPORT" : "○ NORMAL") : "Mode"
                 fill: (ble.hasData && ble.gear === 1) ? win.accent : win.card
                 fg: (ble.hasData && ble.gear === 1) ? "#0a0c10" : win.txt
                 onClicked: ble.setGear(ble.gear === 1 ? 0 : 1)
             }
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
+                Layout.fillWidth: true; enabled: ble.hasData
                 text: ble.hasData ? (ble.light ? "Light ON" : "Light OFF") : "Light"
                 fill: (ble.hasData && ble.light) ? win.accent : win.card
                 fg: (ble.hasData && ble.light) ? "#0a0c10" : win.txt
                 onClicked: ble.setLight(!ble.light)
             }
-        }
-
-        // ---- cruise / reset ----
-        RowLayout {
-            visible: ble.connected && !ble.wrongPassword
-            Layout.fillWidth: true; spacing: 12
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
+                Layout.fillWidth: true; enabled: ble.hasData
                 text: ble.hasData ? (ble.cruise ? "Cruise ON" : "Cruise OFF") : "Cruise"
                 fill: (ble.hasData && ble.cruise) ? win.accent : win.card
                 fg: (ble.hasData && ble.cruise) ? "#0a0c10" : win.txt
                 onClicked: ble.setCruise(!ble.cruise)
             }
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
+                Layout.fillWidth: true; enabled: ble.hasData
                 text: "Reset mileage"
                 onClicked: confirmReset.open()
             }
