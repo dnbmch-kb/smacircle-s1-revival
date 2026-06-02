@@ -20,11 +20,6 @@ ApplicationWindow {
     readonly property string unk:   "—"   // shown whenever the value is genuinely unknown
     // "working on it" — scanning, connecting, authenticating, or awaiting first telemetry
     readonly property bool busy: ble.scanning || (ble.connected && !ble.hasData)
-    // exact half of a control row, so the 2x2 buttons are equal and never exceed the
-    // screen. Derived from the WINDOW width (not the containing layout's width — binding a
-    // child's size hint to its own layout's size makes QtQuick.Layouts thrash on relayout).
-    // 48 = 2x18 column margins + 12 row spacing.
-    readonly property real ctrlBtnW: (win.width - 48) / 2
 
     // ---------- reusable styled button ----------
     component Btn: Button {
@@ -286,19 +281,22 @@ ApplicationWindow {
             onClicked: ble.locked ? ble.unlock() : ble.lock()
         }
 
-        // ---- mode / light ----
-        RowLayout {
+        // ---- mode / light (anchored to exact halves; can't overflow, always equal) ----
+        Item {
             visible: ble.connected && !ble.wrongPassword
-            Layout.fillWidth: true; spacing: 12
+            Layout.fillWidth: true
+            Layout.preferredHeight: 52
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
+                anchors.left: parent.left; anchors.right: parent.horizontalCenter; anchors.rightMargin: 6
+                height: parent.height; enabled: ble.hasData
                 text: ble.hasData ? (ble.gear === 1 ? "● SPORT" : "○ NORMAL") : "Mode"
                 fill: (ble.hasData && ble.gear === 1) ? win.accent : win.card
                 fg: (ble.hasData && ble.gear === 1) ? "#0a0c10" : win.txt
                 onClicked: ble.setGear(ble.gear === 1 ? 0 : 1)
             }
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
+                anchors.left: parent.horizontalCenter; anchors.right: parent.right; anchors.leftMargin: 6
+                height: parent.height; enabled: ble.hasData
                 text: ble.hasData ? (ble.light ? "Light ON" : "Light OFF") : "Light"
                 fill: (ble.hasData && ble.light) ? win.accent : win.card
                 fg: (ble.hasData && ble.light) ? "#0a0c10" : win.txt
@@ -307,18 +305,21 @@ ApplicationWindow {
         }
 
         // ---- cruise / reset ----
-        RowLayout {
+        Item {
             visible: ble.connected && !ble.wrongPassword
-            Layout.fillWidth: true; spacing: 12
+            Layout.fillWidth: true
+            Layout.preferredHeight: 52
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
+                anchors.left: parent.left; anchors.right: parent.horizontalCenter; anchors.rightMargin: 6
+                height: parent.height; enabled: ble.hasData
                 text: ble.hasData ? (ble.cruise ? "Cruise ON" : "Cruise OFF") : "Cruise"
                 fill: (ble.hasData && ble.cruise) ? win.accent : win.card
                 fg: (ble.hasData && ble.cruise) ? "#0a0c10" : win.txt
                 onClicked: ble.setCruise(!ble.cruise)
             }
             Btn {
-                Layout.fillWidth: true; Layout.preferredWidth: win.ctrlBtnW; enabled: ble.hasData
+                anchors.left: parent.horizontalCenter; anchors.right: parent.right; anchors.leftMargin: 6
+                height: parent.height; enabled: ble.hasData
                 text: "Reset mileage"
                 onClicked: confirmReset.open()
             }
