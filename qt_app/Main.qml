@@ -65,16 +65,36 @@ ApplicationWindow {
         }
     }
 
-    // ---------- one status row ----------
+    // ---------- one status row: dim uppercase label + a tinted value chip ----------
     component Stat: RowLayout {
-        // todo - looking a bit fad, pimp it up
+        id: st
         property string label
         property string value
         property color valueColor: win.txt
         Layout.fillWidth: true
-        Label { text: parent.label; color: win.dim; font.pixelSize: 14 }
+        spacing: 8
+        Label {
+            text: st.label.toUpperCase()
+            color: win.dim
+            font.pixelSize: 12; font.letterSpacing: 0.5
+            Layout.alignment: Qt.AlignVCenter
+        }
         Item { Layout.fillWidth: true }
-        Label { text: parent.value; color: parent.valueColor; font.pixelSize: 14; font.bold: true }
+        Rectangle {
+            Layout.alignment: Qt.AlignVCenter
+            radius: 7
+            implicitWidth: valLabel.implicitWidth + 18
+            implicitHeight: valLabel.implicitHeight + 9
+            // soft tint of the value's own colour: red for LOCKED, green for ON, grey otherwise
+            color: Qt.rgba(st.valueColor.r, st.valueColor.g, st.valueColor.b, 0.13)
+            Label {
+                id: valLabel
+                anchors.centerIn: parent
+                text: st.value
+                color: st.valueColor
+                font.pixelSize: 14; font.bold: true
+            }
+        }
     }
 
     // ---------- reset-mileage confirmation ----------
