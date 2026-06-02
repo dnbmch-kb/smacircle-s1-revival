@@ -311,4 +311,47 @@ ApplicationWindow {
             onClicked: ble.disconnectScooter()
         }
     }
+
+    // ---------- transient toast / snackbar (driven by ble.notify) ----------
+    Rectangle {
+        id: toast
+        z: 999
+        property bool error: false
+        property bool shown: false
+        width: Math.min(parent.width - 36, 360)
+        height: toastLabel.implicitHeight + 24
+        radius: 12
+        color: error ? win.danger : win.card
+        border.color: error ? "transparent" : win.line
+        border.width: 1
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: shown ? parent.height - height - 28 : parent.height
+        opacity: shown ? 1 : 0
+        visible: opacity > 0   // never intercepts taps once faded out (plain Rectangle, no MouseArea)
+
+        Behavior on y       { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: 180 } }
+
+        Label {
+            id: toastLabel
+            anchors.centerIn: parent
+            width: parent.width - 32
+            color: toast.error ? "#0a0c10" : win.txt
+            font.pixelSize: 14; font.bold: true
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        Timer { id: toastTimer; interval: 2800; onTriggered: toast.shown = false }
+
+        Connections {
+            target: ble
+            function onNotify(text, error) {
+                toastLabel.text = text
+                toast.error = error
+                toast.shown = true
+                toastTimer.restart()
+            }
+        }
+    }
 }

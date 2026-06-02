@@ -22,15 +22,16 @@ BleController::BleController(QObject *parent) : QObject(parent)
             this, &BleController::onScanFinished);
     connect(m_agent, &QBluetoothDeviceDiscoveryAgent::errorOccurred, this,
             [this](QBluetoothDeviceDiscoveryAgent::Error) {
-                setStatus(QStringLiteral("Scan error: ") + m_agent->errorString());
+                setStatus(QStringLiteral("Scan error: ") + m_agent->errorString(), Toast::Error);
                 m_scanning = false; emit scanningChanged();
             });
     setStatus(QStringLiteral("Idle. Tap Scan & Connect."));
 }
 
-void BleController::setStatus(const QString &s)
+void BleController::setStatus(const QString &s, Toast toast)
 {
     if (s != m_status) { m_status = s; emit statusChanged(); }
+    if (toast != Toast::None) emit notify(s, toast == Toast::Error);
     qInfo().noquote() << s;
 }
 
@@ -50,11 +51,11 @@ void BleController::startScan()
             if (p.status() == Qt::PermissionStatus::Granted)
                 beginScan();
             else
-                setStatus(QStringLiteral("Bluetooth permission denied — enable it in Settings."));
+                setStatus(QStringLiteral("Bluetooth permission denied — enable it in Settings."), Toast::Error);
         });
         return;
     case Qt::PermissionStatus::Denied:
-        setStatus(QStringLiteral("Bluetooth permission denied — enable it in Settings."));
+        setStatus(QStringLiteral("Bluetooth permission denied — enable it in Settings."), Toast::Error);
         return;
     case Qt::PermissionStatus::Granted:
         break;
@@ -95,7 +96,7 @@ void BleController::onScanFinished()
     if (m_haveTarget)
         connectToDevice(m_target);
     else
-        setStatus(QStringLiteral("No scooter found. Power it on and rescan."));
+        setStatus(QStringLiteral("No scooter found. Power it on and rescan."), Toast::Info);
 }
 
 // ---- connection -----------------------------------------------------------
@@ -111,15 +112,18 @@ void BleController::connectToDevice(const QBluetoothDeviceInfo &info)
         m_control->discoverServices();
     });
     connect(m_control, &QLowEnergyController::disconnected, this, [this]() {
+        const bool dropped = m_connected && !m_userDisconnect;   // unexpected link loss
+        m_userDisconnect = false;
         m_connected = false; m_ready = false; m_hasData = false; m_infoQueried = false;
         m_serial.clear(); m_ctrlVer.clear(); m_bleVer.clear();
         if (m_wrongPassword) { m_wrongPassword = false; emit wrongPasswordChanged(); }
         emit connectedChanged(); emit readyChanged(); emit telemetryChanged(); emit infoChanged();
-        setStatus(QStringLiteral("Disconnected"));
+        setStatus(dropped ? QStringLiteral("Connection lost.") : QStringLiteral("Disconnected."),
+                  dropped ? Toast::Error : Toast::Info);
     });
     connect(m_control, &QLowEnergyController::errorOccurred, this,
             [this](QLowEnergyController::Error) {
-                setStatus(QStringLiteral("BLE error: ") + m_control->errorString());
+                setStatus(QStringLiteral("BLE error: ") + m_control->errorString(), Toast::Error);
             });
     connect(m_control, &QLowEnergyController::serviceDiscovered,
             this, &BleController::onServiceDiscovered);
@@ -141,7 +145,7 @@ void BleController::onDiscoveryFinished()
     if (m_service) { m_service->deleteLater(); m_service = nullptr; }
     m_service = m_control->createServiceObject(uuid(M0::SERVICE_UUID), this);
     if (!m_service) {
-        setStatus(QStringLiteral("Nordic UART service not found!"));
+        setStatus(QStringLiteral("Nordic UART service not found!"), Toast::Error);
         return;
     }
     connect(m_service, &QLowEnergyService::stateChanged,
@@ -161,7 +165,7 @@ void BleController::onServiceStateChanged(QLowEnergyService::ServiceState s)
     m_writeChar = m_service->characteristic(uuid(M0::WRITE_UUID));
     const QLowEnergyCharacteristic notifyChar = m_service->characteristic(uuid(M0::NOTIFY_UUID));
     if (!m_writeChar.isValid() || !notifyChar.isValid()) {
-        setStatus(QStringLiteral("Missing NUS characteristics"));
+        setStatus(QStringLiteral("Missing NUS characteristics"), Toast::Error);
         return;
     }
     // Enable notifications: write 0x0100 to the CCCD (0x2902).
@@ -194,7 +198,7 @@ void BleController::onCharacteristicChanged(const QLowEnergyCharacteristic &, co
     case M0::FrameKind::HandshakeFail:
         m_ready = false; emit readyChanged();
         if (!m_wrongPassword) { m_wrongPassword = true; emit wrongPasswordChanged(); }
-        setStatus(QStringLiteral("Wrong Bluetooth password for this unit."));
+        setStatus(QStringLiteral("Wrong Bluetooth password for this unit."), Toast::Error);
         break;
     case M0::FrameKind::ControlVersion: m_ctrlVer = fr.text; emit infoChanged(); break;
     case M0::FrameKind::BleVersion:     m_bleVer  = fr.text; emit infoChanged(); break;
@@ -248,7 +252,7 @@ void BleController::retryHandshake()
 void BleController::writeCommand(const QByteArray &cmd)
 {
     if (!m_service || !m_writeChar.isValid()) {
-        setStatus(QStringLiteral("Not connected"));
+        setStatus(QStringLiteral("Not connected"), Toast::Error);
         return;
     }
     const auto mode = (m_writeChar.properties() & QLowEnergyCharacteristic::WriteNoResponse)
@@ -257,17 +261,19 @@ void BleController::writeCommand(const QByteArray &cmd)
     m_service->writeCharacteristic(m_writeChar, cmd, mode);
 }
 
-void BleController::unlock()          { writeCommand(M0::unlock());     setStatus(QStringLiteral("Unlock sent")); }
-void BleController::lock()            { writeCommand(M0::lock(true));   setStatus(QStringLiteral("Lock sent")); }
+void BleController::unlock()          { writeCommand(M0::unlock());     setStatus(QStringLiteral("Unlock sent"), Toast::Info); }
+void BleController::lock()            { writeCommand(M0::lock(true));   setStatus(QStringLiteral("Lock sent"), Toast::Info); }
 void BleController::setGear(int g)    { writeCommand(M0::gear(g)); }
 void BleController::setLight(bool on) { writeCommand(M0::light(on)); }
 void BleController::setCruise(bool on){ writeCommand(M0::cruise(on)); }
-void BleController::resetMileage()    { writeCommand(M0::clearMileage()); setStatus(QStringLiteral("Mileage reset sent")); }
+void BleController::resetMileage()    { writeCommand(M0::clearMileage()); setStatus(QStringLiteral("Mileage reset sent"), Toast::Info); }
 
 void BleController::disconnectScooter()
 {
     // Just drop the BLE link — do NOT lock. Whatever state the scooter is in
     // (e.g. unlocked) is left as-is, so you can ride on without the app.
-    if (m_control)
+    if (m_control) {
+        m_userDisconnect = true;   // so the disconnected handler says "Disconnected", not "Connection lost"
         m_control->disconnectFromDevice();
+    }
 }

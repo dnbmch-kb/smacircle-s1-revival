@@ -78,9 +78,11 @@ signals:
     void infoChanged();
     void passwordChanged();
     void wrongPasswordChanged();
+    void notify(const QString &message, bool error);   // transient toast (snackbar)
 
 private:
-    void setStatus(const QString &s);
+    enum class Toast { None, Info, Error };
+    void setStatus(const QString &s, Toast toast = Toast::None);
     void beginScan();   // actual discovery, after permission is granted
     void connectToDevice(const QBluetoothDeviceInfo &info);
     void writeCommand(const QByteArray &cmd);
@@ -114,4 +116,5 @@ private:
     QString m_password = QStringLiteral("0000");
     bool m_wrongPassword = false;
     bool m_infoQueried   = false;
+    bool m_userDisconnect = false;   // true while a user-initiated disconnect is in flight
 };

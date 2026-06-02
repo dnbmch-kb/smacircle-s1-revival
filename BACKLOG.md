@@ -33,11 +33,6 @@ first match and stops.
 - Our S1 *does* advertise `6e400001`, so it works today; the connect-time service check is the
   reliable gate.
 
-### Error toasts / transient messages  *(qt_app)*
-Surface BLE errors and command outcomes (scan error, link lost, write failed, wrong password,
-"mileage reset sent") as transient toasts/snackbars, not only the one-line status label.
-A small QML snackbar component driven by a `notify(text)` signal on `BleController`.
-
 ### iOS CI pipeline (simulator build)  *(ci)*
 Add `.github/workflows/ios.yml`: build for the **iOS simulator** on a macOS runner (free on a
 public repo; proves the iOS build compiles). Device / TestFlight signing steps gated behind
@@ -104,3 +99,10 @@ to `0000`. Parked by decision; low value, easy to lock yourself out.
 - Android + Windows release CI (`android.yml`, `windows.yml`), Qt cached between runs.
   `v0.1.1` published — icon'd, version-stamped APK + portable Windows zip; installs and
   launches on a real Android phone.
+- Distinct release naming — artifacts and the desktop exe are `smacircle-s1-revival.*`
+  (was `SmacircleS1*`); on-device app name is "Smacircle S1 freed", set apart from the
+  vendor app. Package id `eu.danube.smacircle` unchanged (updates still install in place).
+- Error toasts — transient snackbar over the status line (red for errors, neutral for
+  confirmations), driven by a `notify` signal on `BleController`: scan/BLE errors, lost
+  link (vs. a calm "Disconnected" on user disconnect), wrong password, and unlock / lock /
+  mileage-reset confirmations.
