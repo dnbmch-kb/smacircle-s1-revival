@@ -6,7 +6,7 @@ REM  Run once after the first build (re-run if you add Qt modules).
 REM ============================================================
 setlocal
 set "QTDIR=C:\Qt\6.10.1\msvc2022_64"
-set "EXE=%~dp0build\SmacircleQt.exe"
+set "EXE=%~dp0build\smacircle-s1-revival.exe"
 
 if not exist "%EXE%" (
   echo Build first: "%EXE%" not found. Run build.bat

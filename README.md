@@ -77,9 +77,9 @@ bricks: instant e-waste, including brand-new units never opened.
 
 From the [**Releases**](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page:
 
-- **Android** — `SmacircleS1.apk`. Needs **Android 9.0+**. Allow "install unknown apps", tap to
+- **Android** — `smacircle-s1-revival.apk`. Needs **Android 9.0+**. Allow "install unknown apps", tap to
   install; first launch asks for the Bluetooth permission.
-- **Windows** — `SmacircleS1-windows-x64.zip`. Unzip, run `SmacircleQt.exe` (portable).
+- **Windows** — `smacircle-s1-revival-windows-x64.zip`. Unzip, run `smacircle-s1-revival.exe` (portable).
 
 ## Run / build from source
 

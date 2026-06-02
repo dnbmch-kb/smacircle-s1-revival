@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
 REM  Build SmacircleQt (Release) with Qt 6.10.1 MSVC + Ninja.
-REM  Close any running SmacircleQt.exe first (it locks the exe).
+REM  Close any running smacircle-s1-revival.exe first (it locks the exe).
 REM ============================================================
 setlocal
 
@@ -25,7 +25,7 @@ echo === Building ===
 "%CMAKE%" --build "%BLD%" || goto :err
 
 echo.
-echo BUILD OK  ->  "%BLD%\SmacircleQt.exe"
+echo BUILD OK  ->  "%BLD%\smacircle-s1-revival.exe"
 echo (run deploy.bat once to bundle the Qt runtime, then run.bat)
 exit /b 0
 

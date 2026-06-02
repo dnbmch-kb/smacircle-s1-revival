@@ -98,19 +98,19 @@ jobs:
           "$BT/zipalign" -p -f 4 "$APK" aligned.apk
           "$BT/apksigner" sign --ks release.jks --ks-pass "pass:$KS_PASS" \
             --key-pass "pass:$KEY_PASS" --ks-key-alias "$KEY_ALIAS" \
-            --out SmacircleS1.apk aligned.apk
-          "$BT/apksigner" verify --verbose SmacircleS1.apk
+            --out smacircle-s1-revival.apk aligned.apk
+          "$BT/apksigner" verify --verbose smacircle-s1-revival.apk
           rm -f release.jks aligned.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SmacircleS1-apk
-          path: SmacircleS1.apk
+          name: smacircle-s1-revival-apk
+          path: smacircle-s1-revival.apk
 
       - name: Attach APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: SmacircleS1.apk
+          files: smacircle-s1-revival.apk
           generate_release_notes: true

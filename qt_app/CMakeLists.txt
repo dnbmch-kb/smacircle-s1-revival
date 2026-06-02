@@ -50,6 +50,9 @@ qt_add_resources(SmacircleQt "appicon"
 set_target_properties(SmacircleQt PROPERTIES WIN32_EXECUTABLE ON)
 if(WIN32)
     target_sources(SmacircleQt PRIVATE app.rc)
+    # Distribution exe name (target stays SmacircleQt so the QML module/resources
+    # don't churn). Android keeps the default .so name — dashes break JNI loading.
+    set_target_properties(SmacircleQt PROPERTIES OUTPUT_NAME "smacircle-s1-revival")
 endif()
 
 target_link_libraries(SmacircleQt PRIVATE Qt6::Quick Qt6::Bluetooth)
