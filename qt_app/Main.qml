@@ -219,6 +219,17 @@ ApplicationWindow {
             onClicked: ble.startScan()
         }
 
+        // ---- demo entry (only present in SMACIRCLE_DEMO builds) ----
+        Btn {
+            Layout.fillWidth: true; implicitHeight: 40
+            visible: ble.demoBuild && !ble.connected
+            enabled: !ble.scanning
+            text: "Try demo — no bike needed"
+            font.pixelSize: 13
+            fill: win.card; fg: win.dim
+            onClicked: ble.startDemo()
+        }
+
         // ---- wrong-password prompt (this unit isn't on 0000) ----
         Rectangle {
             visible: ble.connected && ble.wrongPassword

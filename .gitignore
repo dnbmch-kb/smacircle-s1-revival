@@ -1,5 +1,6 @@
 # --- Build output ---
 qt_app/build/
+qt_app/build-demo/
 qt_app/android/build/
 *.user
 CMakeLists.txt.user*

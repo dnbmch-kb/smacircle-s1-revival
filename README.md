@@ -101,6 +101,10 @@ deploy.bat  :: bundle the Qt runtime (first time)
 run.bat     :: launch
 ```
 
+No bike handy? `build-demo.bat` builds a separate **simulated-S1 demo** (a "Try demo" button
+fakes a connection and streams telemetry) so the whole UX — dashboard, controls, toasts — can be
+clicked through with no hardware. The demo flag is off in release CI, so this code never ships.
+
 ## Continuous integration
 
 | Workflow | Triggers | Output |

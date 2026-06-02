@@ -106,3 +106,6 @@ to `0000`. Parked by decision; low value, easy to lock yourself out.
   confirmations), driven by a `notify` signal on `BleController`: scan/BLE errors, lost
   link (vs. a calm "Disconnected" on user disconnect), wrong password, and unlock / lock /
   mileage-reset confirmations.
+- No-hardware demo mode — `build-demo.bat` (`-DSMACIRCLE_DEMO=ON`) builds a simulated S1: a
+  "Try demo" button fakes a connection and streams synthetic telemetry; controls mutate local
+  state and fire the toasts. Compiled out of release builds (flag off in CI).

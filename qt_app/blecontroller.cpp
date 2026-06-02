@@ -4,6 +4,9 @@
 #include <QPermissions>
 #include <QTimer>
 #include <QDebug>
+#ifdef SMACIRCLE_DEMO
+#include <cmath>
+#endif
 
 namespace {
 QBluetoothUuid uuid(const char *s) { return QBluetoothUuid(QString::fromLatin1(s)); }
@@ -261,15 +264,70 @@ void BleController::writeCommand(const QByteArray &cmd)
     m_service->writeCharacteristic(m_writeChar, cmd, mode);
 }
 
-void BleController::unlock()          { writeCommand(M0::unlock());     setStatus(QStringLiteral("Unlock sent"), Toast::Info); }
-void BleController::lock()            { writeCommand(M0::lock(true));   setStatus(QStringLiteral("Lock sent"), Toast::Info); }
-void BleController::setGear(int g)    { writeCommand(M0::gear(g)); }
-void BleController::setLight(bool on) { writeCommand(M0::light(on)); }
-void BleController::setCruise(bool on){ writeCommand(M0::cruise(on)); }
-void BleController::resetMileage()    { writeCommand(M0::clearMileage()); setStatus(QStringLiteral("Mileage reset sent"), Toast::Info); }
+void BleController::unlock()
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) { m_t.locked = false; emit telemetryChanged(); setStatus(QStringLiteral("Unlocked (demo)"), Toast::Info); return; }
+#endif
+    writeCommand(M0::unlock());
+    setStatus(QStringLiteral("Unlock sent"), Toast::Info);
+}
+
+void BleController::lock()
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) { m_t.locked = true; m_t.speedKmh = 0.0; emit telemetryChanged(); setStatus(QStringLiteral("Locked (demo)"), Toast::Info); return; }
+#endif
+    writeCommand(M0::lock(true));
+    setStatus(QStringLiteral("Lock sent"), Toast::Info);
+}
+
+void BleController::setGear(int g)
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) { m_t.gear = g; emit telemetryChanged(); return; }
+#endif
+    writeCommand(M0::gear(g));
+}
+
+void BleController::setLight(bool on)
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) { m_t.light = on; emit telemetryChanged(); return; }
+#endif
+    writeCommand(M0::light(on));
+}
+
+void BleController::setCruise(bool on)
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) { m_t.cruise = on; emit telemetryChanged(); return; }
+#endif
+    writeCommand(M0::cruise(on));
+}
+
+void BleController::resetMileage()
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) { m_t.tripKm = 0.0; m_t.totalKm = 0.0; emit telemetryChanged(); setStatus(QStringLiteral("Mileage reset (demo)"), Toast::Info); return; }
+#endif
+    writeCommand(M0::clearMileage());
+    setStatus(QStringLiteral("Mileage reset sent"), Toast::Info);
+}
 
 void BleController::disconnectScooter()
 {
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) {
+        m_demo = false;
+        if (m_demoTimer) m_demoTimer->stop();
+        m_connected = false; m_ready = false; m_hasData = false;
+        m_serial.clear(); m_ctrlVer.clear(); m_bleVer.clear();
+        emit connectedChanged(); emit readyChanged(); emit telemetryChanged(); emit infoChanged();
+        setStatus(QStringLiteral("Disconnected."), Toast::Info);
+        return;
+    }
+#endif
     // Just drop the BLE link — do NOT lock. Whatever state the scooter is in
     // (e.g. unlocked) is left as-is, so you can ride on without the app.
     if (m_control) {
@@ -277,3 +335,57 @@ void BleController::disconnectScooter()
         m_control->disconnectFromDevice();
     }
 }
+
+// ---- demo mode (compiled in only with -DSMACIRCLE_DEMO) --------------------
+bool BleController::demoBuild() const
+{
+#ifdef SMACIRCLE_DEMO
+    return true;
+#else
+    return false;
+#endif
+}
+
+void BleController::startDemo()
+{
+#ifdef SMACIRCLE_DEMO
+    if (m_demo) return;
+    m_demo = true;
+    m_deviceName = QStringLiteral("SMACIRCLE-DEMO");
+    m_serial  = QStringLiteral("SMACIRCLE09829");
+    m_ctrlVer = QStringLiteral("0142");
+    m_bleVer  = QStringLiteral("0210");
+    m_t = M0::Telemetry{};
+    m_t.valid = true; m_t.locked = true; m_t.battery = 72;
+    m_t.tripKm = 3.4; m_t.totalKm = 128.6;
+    m_connected = true; m_ready = true; m_hasData = true;
+    emit connectedChanged(); emit readyChanged(); emit infoChanged(); emit telemetryChanged();
+    setStatus(QStringLiteral("Demo mode — simulated S1, no bike connected."), Toast::Info);
+
+    if (!m_demoTimer) {
+        m_demoTimer = new QTimer(this);
+        connect(m_demoTimer, &QTimer::timeout, this, &BleController::demoTick);
+    }
+    m_demoCount = 0;
+    m_demoTimer->start(700);
+#endif
+}
+
+#ifdef SMACIRCLE_DEMO
+void BleController::demoTick()
+{
+    ++m_demoCount;
+    if (!m_t.locked) {
+        // gentle simulated ride: speed wanders, trip/total tick up, battery drains
+        const double base = (m_t.gear == 1) ? 22.0 : 14.0;
+        m_t.speedKmh = qMax(0.0, base + 6.0 * std::sin(m_demoCount * 0.4));
+        const double km = m_t.speedKmh / 3600.0 * 0.7;   // distance covered in 0.7 s
+        m_t.tripKm  += km;
+        m_t.totalKm += km;
+        if (m_demoCount % 10 == 0 && m_t.battery > 1) --m_t.battery;
+    } else {
+        m_t.speedKmh = 0.0;
+    }
+    emit telemetryChanged();
+}
+#endif

@@ -4,6 +4,10 @@ project(SmacircleQt VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# No-hardware demo build (simulated S1). OFF for all release/CI builds, so the
+# simulation code is compiled out of shipped binaries. Turn ON via build-demo.bat.
+option(SMACIRCLE_DEMO "Build the no-hardware demo (simulated S1)" OFF)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Bluetooth)
 
 qt_standard_project_setup(REQUIRES 6.5)
@@ -57,6 +61,14 @@ endif()
 
 target_link_libraries(SmacircleQt PRIVATE Qt6::Quick Qt6::Bluetooth)
 target_compile_definitions(SmacircleQt PRIVATE APP_VERSION="${APP_VERSION}")
+
+if(SMACIRCLE_DEMO)
+    target_compile_definitions(SmacircleQt PRIVATE SMACIRCLE_DEMO)
+    if(WIN32)   # mark the demo exe so it can't be confused with the real one
+        set_target_properties(SmacircleQt PROPERTIES OUTPUT_NAME "smacircle-s1-revival-demo")
+    endif()
+    message(STATUS "Smacircle: DEMO build (simulated S1, no hardware)")
+endif()
 
 # --- Android packaging (no effect on desktop builds) ---
 if(ANDROID)

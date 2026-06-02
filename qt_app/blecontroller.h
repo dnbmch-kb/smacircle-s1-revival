@@ -33,6 +33,7 @@ class BleController : public QObject
     Q_PROPERTY(QString bleVersion     READ bleVersion     NOTIFY infoChanged)
     Q_PROPERTY(QString password       READ password WRITE setPassword NOTIFY passwordChanged)
     Q_PROPERTY(bool    wrongPassword  READ wrongPassword  NOTIFY wrongPasswordChanged)
+    Q_PROPERTY(bool    demoBuild      READ demoBuild      CONSTANT) // true only in SMACIRCLE_DEMO builds
 
 public:
     explicit BleController(QObject *parent = nullptr);
@@ -57,6 +58,7 @@ public:
     QString bleVersion() const     { return m_bleVer; }
     QString password() const       { return m_password; }
     bool    wrongPassword() const  { return m_wrongPassword; }
+    bool    demoBuild() const;
 
     Q_INVOKABLE void startScan();
     Q_INVOKABLE void disconnectScooter();
@@ -68,6 +70,7 @@ public:
     Q_INVOKABLE void resetMileage();
     Q_INVOKABLE void setPassword(const QString &pw);
     Q_INVOKABLE void retryHandshake();   // re-send the (possibly new) password
+    Q_INVOKABLE void startDemo();        // simulated S1 (no-op unless built with SMACIRCLE_DEMO)
 
 signals:
     void statusChanged();
@@ -117,4 +120,11 @@ private:
     bool m_wrongPassword = false;
     bool m_infoQueried   = false;
     bool m_userDisconnect = false;   // true while a user-initiated disconnect is in flight
+
+#ifdef SMACIRCLE_DEMO
+    void demoTick();                 // synthetic telemetry, driven by m_demoTimer
+    QTimer *m_demoTimer = nullptr;
+    int  m_demoCount = 0;
+    bool m_demo = false;
+#endif
 };
