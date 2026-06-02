@@ -33,11 +33,6 @@ first match and stops.
 - Our S1 *does* advertise `6e400001`, so it works today; the connect-time service check is the
   reliable gate.
 
-### App icon  *(qt_app)*
-Ships with the default system launcher icon (the manifest deliberately omits a custom one).
-Add a real icon: Android adaptive launcher (`res/mipmap-*`) + a desktop window/taskbar icon.
-Provide one source SVG/PNG and generate the densities.
-
 ### Error toasts / transient messages  *(qt_app)*
 Surface BLE errors and command outcomes (scan error, link lost, write failed, wrong password,
 "mileage reset sent") as transient toasts/snackbars, not only the one-line status label.
@@ -103,5 +98,9 @@ to `0000`. Parked by decision; low value, easy to lock yourself out.
   detection with a wrong-password prompt; indeterminate activity bar while busy.
 - Honest UI — every readout shows "—" until live telemetry arrives (`hasData`).
 - Diagnosed "won't go" as non-zero-start (kick-to-start), not a lock.
-- Android + Windows release CI (`android.yml`, `windows.yml`); `v0.1.0` published — APK
-  installs and launches on a real phone.
+- App icon (open padlock) — Android mipmaps + Windows exe icon + window icon. MIT LICENSE.
+  Minimal `ble_client/examples/unlock.py`.
+- Version stamped from `git describe` (Android versionName/Code + header label).
+- Android + Windows release CI (`android.yml`, `windows.yml`), Qt cached between runs.
+  `v0.1.1` published — icon'd, version-stamped APK + portable Windows zip; installs and
+  launches on a real Android phone.
