@@ -61,7 +61,7 @@ qt_add_resources(SmacircleQt "btnicons"
         icons/arrows-rotate.svg
         icons/link-slash.svg
         icons/flask.svg
-        icons/bluetooth.svg
+        icons/magnifying-glass.svg
         icons/circle-info.svg
         icons/rabbit.svg
         icons/turtle.svg

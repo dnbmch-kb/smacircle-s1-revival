@@ -78,19 +78,36 @@ ApplicationWindow {
     }
 
     // ---------- reset-mileage confirmation ----------
+    // No standardButtons: the system button box draws a square-cornered footer over the
+    // rounded background (and its labels follow the OS language). Use our own Btns instead.
     Dialog {
-        // Todo this dialog yes no is in system language - inconsistent if sys lang is DE and app is full engl..
         id: confirmReset
         parent: Overlay.overlay
         anchors.centerIn: parent
-        width: Math.min(win.width - 60, 330)
+        width: Math.min(win.width - 60, 340)
         modal: true
-        standardButtons: Dialog.Yes | Dialog.Cancel
-        onAccepted: ble.resetMileage()
-        background: Rectangle { radius: 12; color: win.card; border.color: win.line; border.width: 1 }
-        contentItem: Label {
-            text: "Reset the total mileage counter?\nThis cannot be undone."
-            color: win.txt; wrapMode: Text.WordWrap; padding: 8
+        padding: 18
+        background: Rectangle { radius: 16; color: win.card; border.color: win.line; border.width: 1 }
+        contentItem: ColumnLayout {
+            spacing: 16
+            Label {
+                text: "Reset the total mileage counter?\nThis cannot be undone."
+                color: win.txt; wrapMode: Text.WordWrap; Layout.fillWidth: true
+            }
+            RowLayout {
+                Layout.fillWidth: true; spacing: 12
+                Btn {
+                    Layout.fillWidth: true
+                    text: "Cancel"
+                    onClicked: confirmReset.close()
+                }
+                Btn {
+                    Layout.fillWidth: true
+                    text: "Reset"
+                    fill: win.danger; fg: "#0a0c10"; edge: "transparent"
+                    onClicked: { ble.resetMileage(); confirmReset.close() }
+                }
+            }
         }
     }
 
@@ -102,8 +119,7 @@ ApplicationWindow {
         width: Math.min(win.width - 60, 340)
         modal: true
         padding: 18
-        standardButtons: Dialog.Close
-        background: Rectangle { radius: 12; color: win.card; border.color: win.line; border.width: 1 }
+        background: Rectangle { radius: 16; color: win.card; border.color: win.line; border.width: 1 }
         contentItem: ColumnLayout {
             spacing: 12
             Label { text: "Device info"; color: win.txt; font.bold: true; font.pixelSize: 16 }
@@ -111,6 +127,12 @@ ApplicationWindow {
             Stat { label: "Controller FW"; value: ble.controlVersion !== "" ? ble.controlVersion : win.unk }
             Stat { label: "Bluetooth FW";  value: ble.bleVersion !== "" ? ble.bleVersion : win.unk }
             Stat { label: "App version";   value: Qt.application.version }
+            Btn {
+                Layout.fillWidth: true
+                Layout.topMargin: 6
+                text: "Close"
+                onClicked: deviceInfo.close()
+            }
         }
     }
 
@@ -244,7 +266,7 @@ ApplicationWindow {
             visible: !ble.connected
             enabled: !ble.scanning
             text: ble.scanning ? "Scanning…" : "Scan & Connect"
-            iconSource: "qrc:/icons/bluetooth.svg"
+            iconSource: "qrc:/icons/magnifying-glass.svg"
             fill: win.accent; fg: "#0a0c10"; edge: "transparent"
             onClicked: ble.startScan()
         }
