@@ -9,6 +9,8 @@ abandoned.
 > on the [Releases](https://github.com/dnbmch-kb/smacircle-s1-revival/releases) page. Roadmap in
 > [BACKLOG.md](BACKLOG.md).
 
+<p align="center"><img src="qt_app_0_1.png" width="320" alt="Smacircle S1 — freed: battery + speed dashboard, one-tap unlock, and controls"></p>
+
 ---
 
 ## Why this exists

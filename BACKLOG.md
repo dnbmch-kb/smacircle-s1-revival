@@ -71,7 +71,6 @@ $99 signing wall; this is build-only validation, not distribution.)
 ### Release polish
 - **APK slimming** — the release APK is ~47 MB. Strip unused QML modules + Qt translations and
   tighten the deployment to roughly halve it.
-- **README screenshot/GIF** — a shot of the dashboard (author to capture).
 - **Stable signing keystore** — generate a release `.jks` and store it + its credentials as the
   repo secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
   `ANDROID_KEY_PASSWORD`) so APK updates install in place instead of needing a reinstall. Do it
@@ -133,3 +132,6 @@ to `0000`. Parked by decision; low value, easy to lock yourself out.
 - No-hardware demo mode — `build-demo.bat` (`-DSMACIRCLE_DEMO=ON`) builds a simulated S1: a
   "Try demo" button fakes a connection and streams synthetic telemetry; controls mutate local
   state and fire the toasts. Compiled out of release builds (flag off in CI).
+- UI polish — white Font Awesome icons on every control (lock/unlock, rabbit/turtle mode,
+  light, cruise, reset, scan, demo, disconnect); device-info moved to an ⓘ popup; equal-width
+  control buttons; status rows restyled as labelled value chips. Dashboard screenshot in README.
