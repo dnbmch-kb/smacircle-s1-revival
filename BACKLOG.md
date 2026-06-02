@@ -33,6 +33,30 @@ first match and stops.
 - Our S1 *does* advertise `6e400001`, so it works today; the connect-time service check is the
   reliable gate.
 
+### Probe hidden M0 telemetry: error / warning codes  *(protocol + hardware)*
+`M0Protocol` defines two query builders we never ported — and **the vendor app never calls
+them either** (no callers anywhere; `parserInfo` has no branch for their replies). They're
+dead code in the official app, so the reply format is unknown:
+
+- `getErrorCode()` → frame `A5 5A 04 20 01 1B 02 …` ([M0Protocol.java:164](work/src_1.2.4/sources/com/smacircle/android/ble/M0Protocol.java#L164))
+- `getWarningCode()` → frame `A5 5A 04 20 01 1C 02 …` ([M0Protocol.java:171](work/src_1.2.4/sources/com/smacircle/android/ble/M0Protocol.java#L171))
+
+**Why it matters (the C041/S1 "same model" angle):** the M0 status frame is *fully* mapped —
+speed, battery%, flags+gear, trip, total ([M0Protocol.java:255-263](work/src_1.2.4/sources/com/smacircle/android/ble/M0Protocol.java#L255-L263), ported in
+[protocol.py:126-136](ble_client/protocol.py#L126-L136)). It carries **no voltage, current, ride-time, or fault detail**.
+Those fields exist in the shared `BLEInfoBean` ([BLEInfoBean.java:9-31](work/src_1.2.4/sources/com/smacircle/android/ble/BLEInfoBean.java#L9-L31): `voltage`, `current`,
+`allTimeH/MIN`, `lockTimeS`, `autoOffTime`, `startPower`, `errCode`, `maxSpeed`) but are set
+**only by the C041 parser** ([C041Protocol.java:222-238](work/src_1.2.4/sources/com/smacircle/android/ble/C041Protocol.java#L222-L238)). If C041 and the S1 share the same
+controller board, that sensor data physically exists on the device — M0 just doesn't surface
+it in the status frame. These two opcodes (and possibly an undiscovered voltage/current query)
+are the likely path to it. No "busbar current" by that name exists in either protocol; C041's
+closest field is a generic pack `current` float.
+
+- **Work:** add `get_error_code()` / `get_warning_code()` to `protocol.py`, fire at the real
+  S1, capture raw replies, and reverse the layout from the bytes. Hardware-in-the-loop —
+  unprovable offline. Bonus: sweep nearby `0x20/0x01/ex` query opcodes for hidden telemetry.
+- ⚠️ Read-only queries, low risk, but only the bike can confirm the reply format.
+
 ### iOS CI pipeline (simulator build)  *(ci)*
 Add `.github/workflows/ios.yml`: build for the **iOS simulator** on a macOS runner (free on a
 public repo; proves the iOS build compiles). Device / TestFlight signing steps gated behind
