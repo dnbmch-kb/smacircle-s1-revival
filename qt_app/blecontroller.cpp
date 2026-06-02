@@ -224,7 +224,7 @@ void BleController::onReady()
     m_ready = true;
     if (m_wrongPassword) { m_wrongPassword = false; emit wrongPasswordChanged(); }
     emit readyChanged();
-    setStatus(QStringLiteral("Ready. Unlock, then kick-start to ride."));
+    setStatus(QStringLiteral("Ready. Unlock, then kick-start to ride."), Toast::Info);
     queryDeviceInfo();
 }
 

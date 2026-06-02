@@ -74,6 +74,25 @@ ApplicationWindow {
         }
     }
 
+    // ---------- device info popup (serial + firmware) ----------
+    Dialog {
+        id: deviceInfo
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(win.width - 60, 340)
+        modal: true
+        padding: 18
+        standardButtons: Dialog.Close
+        background: Rectangle { radius: 12; color: win.card; border.color: win.line; border.width: 1 }
+        contentItem: ColumnLayout {
+            spacing: 12
+            Label { text: "Device info"; color: win.txt; font.bold: true; font.pixelSize: 16 }
+            Stat { label: "Serial";        value: ble.serial !== "" ? ble.serial : win.unk }
+            Stat { label: "Controller FW"; value: ble.controlVersion !== "" ? ble.controlVersion : win.unk }
+            Stat { label: "Bluetooth FW";  value: ble.bleVersion !== "" ? ble.bleVersion : win.unk }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 18
@@ -99,10 +118,14 @@ ApplicationWindow {
                 color: ble.connected ? win.accent : win.dim
                 font.pixelSize: 12; leftPadding: 6
             }
-        }
-        Label {
-            text: ble.status; color: win.dim; font.pixelSize: 12
-            wrapMode: Text.WordWrap; Layout.fillWidth: true
+            Btn {
+                visible: ble.connected
+                Layout.alignment: Qt.AlignVCenter; Layout.leftMargin: 8
+                implicitWidth: 36; implicitHeight: 30
+                text: "ⓘ"; font.pixelSize: 16
+                fill: win.card; fg: win.dim
+                onClicked: deviceInfo.open()
+            }
         }
 
         // ---- indeterminate activity bar (visible while busy) ----
@@ -194,21 +217,6 @@ ApplicationWindow {
             }
         }
 
-        // ---- device info (firmware + serial; populated shortly after connect) ----
-        Rectangle {
-            visible: ble.connected
-            Layout.fillWidth: true; radius: 16; color: win.card
-            border.color: win.line; border.width: 1
-            Layout.preferredHeight: infoCol.implicitHeight + 28
-            ColumnLayout {
-                id: infoCol
-                anchors.fill: parent; anchors.margins: 14; spacing: 9
-                Stat { label: "Serial";        value: ble.serial !== "" ? ble.serial : win.unk }
-                Stat { label: "Controller FW"; value: ble.controlVersion !== "" ? ble.controlVersion : win.unk }
-                Stat { label: "Bluetooth FW";  value: ble.bleVersion !== "" ? ble.bleVersion : win.unk }
-            }
-        }
-
         // ---- connect (shown until connected) ----
         Btn {
             Layout.fillWidth: true
@@ -278,14 +286,14 @@ ApplicationWindow {
             visible: ble.connected && !ble.wrongPassword
             Layout.fillWidth: true; spacing: 12
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
                 text: ble.hasData ? (ble.gear === 1 ? "● SPORT" : "○ NORMAL") : "Mode"
                 fill: (ble.hasData && ble.gear === 1) ? win.accent : win.card
                 fg: (ble.hasData && ble.gear === 1) ? "#0a0c10" : win.txt
                 onClicked: ble.setGear(ble.gear === 1 ? 0 : 1)
             }
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
                 text: ble.hasData ? (ble.light ? "Light ON" : "Light OFF") : "Light"
                 fill: (ble.hasData && ble.light) ? win.accent : win.card
                 fg: (ble.hasData && ble.light) ? "#0a0c10" : win.txt
@@ -298,14 +306,14 @@ ApplicationWindow {
             visible: ble.connected && !ble.wrongPassword
             Layout.fillWidth: true; spacing: 12
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
                 text: ble.hasData ? (ble.cruise ? "Cruise ON" : "Cruise OFF") : "Cruise"
                 fill: (ble.hasData && ble.cruise) ? win.accent : win.card
                 fg: (ble.hasData && ble.cruise) ? "#0a0c10" : win.txt
                 onClicked: ble.setCruise(!ble.cruise)
             }
             Btn {
-                Layout.fillWidth: true; enabled: ble.hasData
+                Layout.fillWidth: true; Layout.preferredWidth: 0; enabled: ble.hasData
                 text: "Reset mileage"
                 onClicked: confirmReset.open()
             }
