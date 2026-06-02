@@ -21,8 +21,10 @@ ApplicationWindow {
     // "working on it" — scanning, connecting, authenticating, or awaiting first telemetry
     readonly property bool busy: ble.scanning || (ble.connected && !ble.hasData)
     // exact half of a control row, so the 2x2 buttons are equal and never exceed the
-    // screen (12 = the rows' spacing; root spans the window minus its margins)
-    readonly property real ctrlBtnW: (root.width - 12) / 2
+    // screen. Derived from the WINDOW width (not the containing layout's width — binding a
+    // child's size hint to its own layout's size makes QtQuick.Layouts thrash on relayout).
+    // 48 = 2x18 column margins + 12 row spacing.
+    readonly property real ctrlBtnW: (win.width - 48) / 2
 
     // ---------- reusable styled button ----------
     component Btn: Button {
@@ -97,7 +99,6 @@ ApplicationWindow {
     }
 
     ColumnLayout {
-        id: root
         anchors.fill: parent
         anchors.margins: 18
         spacing: 14
