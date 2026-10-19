@@ -135,3 +135,72 @@ to `0000`. Parked by decision; low value, easy to lock yourself out.
 - UI polish — white Font Awesome icons on every control (lock/unlock, rabbit/turtle mode,
   light, cruise, reset, scan, demo, disconnect); device-info moved to an ⓘ popup; equal-width
   control buttons; status rows restyled as labelled value chips. Dashboard screenshot in README.
+
+---
+
+## Sweep 2026-09-07 (agent portfolio sweep)
+
+Machine-gathered by an agent sweep and re-verified against the working tree on 2026-09-07.
+**Needs an owner pass** — nothing below has been triaged by the operator. Items already open
+above (signing keystore, APK slimming, iOS CI, unified button, multi-device/C041, the
+error/warning opcode probe, the two hardware questions) were deliberately **not** restated.
+
+### Drift — docs vs tree
+
+- [docs/handoff.md](docs/handoff.md) § 2026-06-03 heads its change list "**all on `main`, pushed**"
+  and its kickoff says "`main` clean, nothing pending". `git log --oneline @{u}..HEAD` → one
+  unpushed commit `09d8957`; `git status --short` → ` M CLAUDE.md`, ` M README.md`, `?? docs/arch/`.
+  The ledger has described a state the tree does not have since 2026-06-04.
+- The Documentation Layout block in [CLAUDE.md](CLAUDE.md) names root `roadmap.md` and
+  `project_status.md`. `git ls-files` lists neither — the tracked docs are `BACKLOG.md` and
+  `docs/handoff.md`, and `docs/arch/` exists but is untracked. The block's own preamble says the
+  live tree wins, so this is a question about the block, not a licence to rename anything.
+
+### Test honesty
+
+- **The repo has no tests and CI has no test step, against a stated byte-compatibility invariant.**
+  `git ls-files` contains no test file (every `test_*.py` on disk is inside the gitignored
+  `ble_client/venv/`); `grep -n -i test .github/workflows/*.yml` returns only `runs-on: *-latest`
+  and an unrelated `SDKM=` line. [CLAUDE.md](CLAUDE.md) § External-protocol exception states the
+  hard invariant — "The Python client and the Qt app must stay byte-compatible with the bike" —
+  and `ble_client/protocol.py` and `qt_app/protocol.h` are two independent implementations of that
+  one wire format with nothing comparing them. The same file's Verification & test debt block says
+  "Accumulate host-runnable tests". Toolchain confirmed present today: `python --version` → 3.12.13;
+  `C:/Qt/6.10.1/msvc2022_64`, `C:/Qt/Tools/CMake_64/bin/cmake.exe`, `C:/Qt/Tools/Ninja/ninja.exe`
+  and `…/BuildTools/VC/Auxiliary/Build/vcvars64.bat` all exist.
+
+### Residency
+
+- `docs/arch/qt_app_build_notes.md` (written 2026-06-04) is **untracked** — `git status --short` →
+  `?? docs/arch/`. It is the harvest of the handoff's "Landmines (do NOT undo)" into a normative
+  arch doc, and the Documentation Layout block says handoff entries get pruned once harvested.
+  One copy, no history, never pushed.
+- One commit ahead of `origin`; `gh repo view dnbmch-kb/smacircle-s1-revival --json pushedAt` →
+  `2026-06-02T21:52:57Z`, so the remote has never seen `09d8957`.
+- This file cites the decompiled vendor sources five times by path
+  (`work/src_1.2.4/sources/com/smacircle/android/ble/M0Protocol.java#L164` and four more).
+  `work/` is gitignored (.gitignore § "Decompiled original app, tooling, APK") and holds **728 MB**
+  on this disk only — every one of those citations is unresolvable from a clone.
+
+### Operator decisions
+
+- **The uncommitted README "Tips" paragraph publishes the unit's BLE address to a public repo.**
+  `git diff README.md` adds: "The author's unit advertises as `SMACIRCLE09829` at address
+  `C1:1F:F6:43:E3:F3`". `gh repo view dnbmch-kb/smacircle-s1-revival --json visibility` → `PUBLIC`.
+  Settle this before the commit, not after.
+- **Signing keystore — today's status of the item already open above, not a new item.**
+  `gh secret list --repo dnbmch-kb/smacircle-s1-revival` → empty; none of the four
+  `ANDROID_KEYSTORE_*` secrets exists. `.github/workflows/android.yml:76` reads them and `:92`
+  falls back to an ephemeral key ("Updates will require uninstalling the old app first").
+  Creating and storing that credential is the operator's alone; `keytool` is on this box at
+  `work/jdk/jdk-21.0.11+10/bin/keytool.exe`.
+- The hardware questions and the error/warning opcode probe (both open above) need the physical
+  S1 in hand. No offline path exists to either.
+
+### Correction to an earlier sweep claim
+
+- An earlier pass recorded the release-assets claim as UNVERIFIED. Checked on 2026-09-07:
+  `gh release view v0.2.1 --repo dnbmch-kb/smacircle-s1-revival --json assets` returns both
+  `smacircle-s1-revival.apk` (48,142,871 B) and `smacircle-s1-revival-windows-x64.zip`
+  (28,629,637 B), state `uploaded`, not a draft. README and handoff are correct. The APK size also
+  corroborates the "~47 MB" in Release polish above.
