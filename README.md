@@ -95,6 +95,10 @@ python -m venv venv
 ```
 Minimal unlock-only example: [`ble_client/examples/unlock.py`](ble_client/examples/unlock.py).
 
+> **Tips.** Exit the REPL with `quit` — hard-killing the process leaves a stale GATT link on
+> Windows; if that happens, power-cycle the bike or toggle PC Bluetooth to recover. The author's
+> unit advertises as `SMACIRCLE09829` at address `C1:1F:F6:43:E3:F3`.
+
 **Qt app** — build it (Windows desktop; needs Qt 6.10 MSVC + the Qt Bluetooth module):
 ```bat
 cd qt_app
