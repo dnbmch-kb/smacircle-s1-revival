@@ -30,3 +30,6 @@ Thumbs.db
 .DS_Store
 .vscode/
 .idea/
+
+# --- Local, never published (the unit's BLE identity) ---
+local/
