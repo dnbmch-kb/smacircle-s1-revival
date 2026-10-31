@@ -29,6 +29,8 @@ Both assets clean: `smacircle-s1-revival.apk`, `smacircle-s1-revival-windows-x64
 - I never ran a local build (per repo rule — user builds). Verified by: user's demo builds + CI `v0.2.1` Android + Windows both green.
 - Hardware questions still open: does `clearAllMileage` reset total or trip? Do Serial / Controller FW / Bluetooth FW populate on a real connect? (demo fakes them.)
 
+**Status:** parked on the cockpit.
+
 **Open (top of BACKLOG):**
 - **Stable signing keystore** — APK still ephemeral-signed → in-place updates need uninstall first. Add `ANDROID_KEYSTORE_*` secrets **before the next tag**.
 - Unified connect/disconnect button; multi-device picker + C041; iOS sim CI; APK slimming (~47 MB); probe hidden M0 error/warning codes (hardware).
