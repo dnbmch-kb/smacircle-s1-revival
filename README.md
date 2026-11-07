@@ -95,6 +95,12 @@ python -m venv venv
 ```
 Minimal unlock-only example: [`ble_client/examples/unlock.py`](ble_client/examples/unlock.py).
 
+**Protocol tests** — no bike, no `bleak`: the frame codec, and every command table in
+`qt_app/protocol.h` byte-for-byte against `protocol.py`:
+```powershell
+python -m unittest discover -s ble_client/tests
+```
+
 > **Tips.** Exit the REPL with `quit` — hard-killing the process leaves a stale GATT link on
 > Windows; if that happens, power-cycle the bike or toggle PC Bluetooth to recover. A unit
 > advertises as `SMACIRCLE` followed by five digits; its address is printed by the scan.

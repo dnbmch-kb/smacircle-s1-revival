@@ -176,4 +176,4 @@ deploy.bat
 run.bat
 ```
 
-Per the global `Don't Run Without Asking` block: don't kick off `build.bat`, `ride.py`, or any BLE-touching script without asking — BLE sessions interact with real hardware.
+Don't kick off `build.bat`, `ride.py`, or any BLE-touching script without asking — BLE sessions interact with real hardware. The protocol tests touch none: `python -m unittest discover -s ble_client/tests` (README § Run / build from source).
